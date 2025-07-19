@@ -1,0 +1,7 @@
+TEAM_ID=
+
+PRODUCT_NAME=SimplePodcastPlayer
+PRODUCT_BUNDLE_IDENTIFIER=jp.kztproject.simplepodcastplayer.SimplePodcastPlayer$(TEAM_ID)
+
+CURRENT_PROJECT_VERSION=1
+MARKETING_VERSION=1.0
