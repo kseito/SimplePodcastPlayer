@@ -1,0 +1,24 @@
+name: ktlint
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+
+jobs:
+    kotlin:
+        name: runner / suggester / spotless
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+            - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4
+              with:
+                  java-version: 17
+                  distribution: "temurin"
+                  cache: "gradle"
+            - run: git fetch origin main
+            - run: ./gradlew spotlessKotlinApply
+            - uses: reviewdog/action-suggester@4747dbc9f9e37adba0943e681cc20db466642158 # v1.21.0
+              with:
+                  github_token: ${{ secrets.GITHUB_TOKEN }}
+                  tool_name: spotless
+            - run: ./gradlew spotlessKotlinCheck
