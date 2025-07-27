@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
+    alias(libs.plugins.spotless)
 }
 
 kotlin {
@@ -16,7 +17,7 @@ kotlin {
             jvmTarget.set(JvmTarget.JVM_11)
         }
     }
-    
+
     listOf(
         iosX64(),
         iosArm64(),
@@ -27,9 +28,9 @@ kotlin {
             isStatic = true
         }
     }
-    
+
     sourceSets {
-        
+
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
@@ -80,5 +81,26 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
+}
+
+spotless {
+    kotlin {
+        target("src/**/*.kt")
+        ktlint()
+            .setEditorConfigPath("$rootDir/.editorconfig")
+            .editorConfigOverride(
+                mapOf(
+                    "android" to "true",
+                    "ktlint_function_naming_ignore_when_annotated_with" to "Composable",
+                ),
+            )
+        indentWithSpaces(4)
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+    kotlinGradle {
+        target("*.gradle.kts")
+        ktlint()
+    }
 }
 
