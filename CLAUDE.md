@@ -18,6 +18,8 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - **Run Detekt**: `./gradlew detekt`
 - **Run Detekt with auto-correct**: `./gradlew detektFormat` (if available)
 - **Generate Detekt reports**: Reports are automatically generated in `build/reports/detekt/`
+- **Run Spotless check**: `./gradlew spotlessCheck`
+- **Apply Spotless formatting**: `./gradlew spotlessApply`
 
 ### iOS Development
 - Open `iosApp/iosApp.xcodeproj` in Xcode to run iOS version
