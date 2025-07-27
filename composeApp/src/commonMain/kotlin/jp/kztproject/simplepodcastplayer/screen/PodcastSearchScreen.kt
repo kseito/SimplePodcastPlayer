@@ -18,7 +18,7 @@ fun PodcastSearchScreen(onNavigateToList: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
-            .padding(16.dp)
+            .padding(16.dp),
     ) {
         Text("Search Podcast")
         Button(onClick = onNavigateToList) {
