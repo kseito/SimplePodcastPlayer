@@ -14,6 +14,11 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - **Run tests**: `./gradlew test`
 - **Run tests for specific module**: `./gradlew :composeApp:testDebugUnitTest`
 
+### Code Quality
+- **Run Detekt**: `./gradlew detekt`
+- **Run Detekt with auto-correct**: `./gradlew detektFormat` (if available)
+- **Generate Detekt reports**: Reports are automatically generated in `build/reports/detekt/`
+
 ### iOS Development
 - Open `iosApp/iosApp.xcodeproj` in Xcode to run iOS version
 - iOS framework is built automatically when building from Xcode
@@ -58,3 +63,10 @@ The app follows a simple navigation pattern:
 - Screens are organized in `screen` package
 - Platform implementations use `Platform.kt` interface pattern
 - Shared resources in `composeApp/src/commonMain/composeResources`
+
+## Code Quality and CI/CD
+- **Detekt** is configured for static code analysis across all source sets
+- GitHub Actions workflow runs Detekt on every PR and push to main
+- Configuration file: `detekt-config.yml` with Compose-specific rules
+- HTML and XML reports are generated and uploaded as artifacts
+- Detekt analyzes `commonMain`, `androidMain`, and `iosMain` source sets
