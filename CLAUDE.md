@@ -5,6 +5,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project Overview
 SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatform, targeting Android and iOS platforms. The project uses a shared UI approach where most code is in the `commonMain` source set.
 
+### Requirements Documentation
+- **Requirements specification**: See `document/requirements.md` for detailed functional and technical requirements
+- **Supported platforms**: Android 14+ (API Level 34) and iOS 16+
+- **Core features**: Podcast search, audio playback, subscription management, playback history
+
 ## Common Development Commands
 
 ### Building and Running
@@ -41,7 +46,8 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - Navigation Compose for screen navigation
 - Material3 for UI components
 - Lifecycle ViewModel and Runtime Compose for state management
-- Target: Android SDK 35, minimum SDK 24
+- Target: Android SDK 35, minimum SDK 34 (Android 14+)
+- iOS minimum deployment target: iOS 16.0
 
 ### Application Flow
 The app follows a simple navigation pattern:
