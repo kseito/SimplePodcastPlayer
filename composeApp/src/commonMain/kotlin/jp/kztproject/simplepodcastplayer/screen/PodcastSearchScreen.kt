@@ -43,5 +43,7 @@ fun PodcastSearchScreen(
 @Preview
 @Composable
 fun PodcastSearchScreenPreview() {
-    PodcastSearchScreen(onNavigateToList = {})
+    MaterialTheme {
+        PodcastSearchScreen(onNavigateToList = {})
+    }
 }
