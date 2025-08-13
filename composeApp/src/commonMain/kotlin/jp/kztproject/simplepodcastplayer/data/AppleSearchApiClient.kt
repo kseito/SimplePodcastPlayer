@@ -16,12 +16,15 @@ import kotlinx.serialization.json.Json
 class AppleSearchApiClient {
     private val client = HttpClient {
         install(ContentNegotiation) {
-            json(Json {
-                ignoreUnknownKeys = true
-                isLenient = true
-                prettyPrint = false
-                encodeDefaults = true
-            }, contentType = ContentType.Any)
+            json(
+                Json {
+                    ignoreUnknownKeys = true
+                    isLenient = true
+                    prettyPrint = false
+                    encodeDefaults = true
+                },
+                contentType = ContentType.Any,
+            )
         }
     }
 
@@ -29,12 +32,8 @@ class AppleSearchApiClient {
         const val BASE_URL = "https://itunes.apple.com/search"
     }
 
-    suspend fun searchPodcasts(
-        term: String,
-        limit: Int = 30,
-        country: String = "US"
-    ): PodcastSearchResponse {
-        return client.get(BASE_URL) {
+    suspend fun searchPodcasts(term: String, limit: Int = 30, country: String = "US"): PodcastSearchResponse =
+        client.get(BASE_URL) {
             parameter("term", term)
             parameter("country", country)
             parameter("media", "podcast")
@@ -42,7 +41,6 @@ class AppleSearchApiClient {
             header(HttpHeaders.Accept, ContentType.Application.Json.toString())
             header(HttpHeaders.UserAgent, "SimplePodcastPlayer/1.0")
         }.body()
-    }
 
     fun close() {
         client.close()

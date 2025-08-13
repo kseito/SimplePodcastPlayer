@@ -42,7 +42,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 fun PodcastSearchScreen(
     onNavigateToList: () -> Unit,
-    viewModel: PodcastSearchViewModel = viewModel { PodcastSearchViewModel() }
+    viewModel: PodcastSearchViewModel = viewModel { PodcastSearchViewModel() },
 ) {
     val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
 
@@ -57,14 +57,14 @@ fun PodcastSearchScreen(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             TextButton(onClick = onNavigateToList) {
                 Text("← Back")
             }
             Text(
                 text = "Podcast Search",
-                style = MaterialTheme.typography.headlineMedium
+                style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(modifier = Modifier.width(48.dp)) // Balance the layout
         }
@@ -80,7 +80,7 @@ fun PodcastSearchScreen(
             label = { Text("Search podcasts...") },
             placeholder = { Text("Enter podcast name or topic") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            singleLine = true,
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -91,7 +91,7 @@ fun PodcastSearchScreen(
                 viewModel.updateSearchQuery(searchText)
                 viewModel.searchPodcasts()
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Text("Search")
         }
@@ -104,7 +104,7 @@ fun PodcastSearchScreen(
                 items(podcasts) { podcast ->
                     PodcastItem(
                         podcast = podcast,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
             }
@@ -112,26 +112,23 @@ fun PodcastSearchScreen(
             Text(
                 text = "No podcasts found. Try searching for a topic or podcast name.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
 @Composable
-fun PodcastItem(
-    podcast: Podcast,
-    modifier: Modifier = Modifier
-) {
+fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(8.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             // Podcast artwork placeholder
             Box(
@@ -139,50 +136,49 @@ fun PodcastItem(
                     .size(80.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "🎧",
-                    style = MaterialTheme.typography.headlineLarge
+                    style = MaterialTheme.typography.headlineLarge,
                 )
             }
-            
+
             Spacer(modifier = Modifier.width(12.dp))
-            
+
             // Podcast info
             Column(
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Text(
                     text = podcast.trackName,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 Text(
                     text = podcast.artistName,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
-                
+
                 podcast.primaryGenreName?.let { genre ->
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = genre,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
         }
     }
 }
-
 
 @Preview
 @Composable

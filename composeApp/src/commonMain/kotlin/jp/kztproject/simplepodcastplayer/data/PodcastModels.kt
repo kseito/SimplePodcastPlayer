@@ -8,7 +8,7 @@ data class PodcastSearchResponse(
     @SerialName("resultCount")
     val resultCount: Int,
     @SerialName("results")
-    val results: List<Podcast>
+    val results: List<Podcast>,
 )
 
 @Serializable
@@ -56,5 +56,5 @@ data class Podcast(
     @SerialName("genreIds")
     val genreIds: List<String>? = null,
     @SerialName("genres")
-    val genres: List<String>? = null
+    val genres: List<String>? = null,
 )
