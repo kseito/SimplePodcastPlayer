@@ -32,10 +32,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -130,19 +132,7 @@ fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Podcast artwork placeholder
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "🎧",
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-            }
+            PodcastImage(podcast)
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -176,6 +166,30 @@ fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PodcastImage(podcast: Podcast) {
+    Box(
+        modifier = Modifier
+            .size(80.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        AsyncImage(
+            model = podcast.artworkUrl100 ?: podcast.artworkUrl60 ?: podcast.artworkUrl30,
+            contentDescription = "Podcast artwork for ${podcast.trackName}",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        if (podcast.artworkUrl100 == null && podcast.artworkUrl60 == null && podcast.artworkUrl30 == null) {
+            Text(
+                text = "🎧",
+                style = MaterialTheme.typography.headlineLarge,
+            )
         }
     }
 }
