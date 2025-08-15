@@ -48,6 +48,22 @@ fun PodcastSearchScreen(
 ) {
     val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
 
+    PodcastSearchScreenContent(
+        podcasts = podcasts,
+        onNavigateToList = onNavigateToList,
+        onSearch = { query ->
+            viewModel.updateSearchQuery(query)
+            viewModel.searchPodcasts()
+        }
+    )
+}
+
+@Composable
+private fun PodcastSearchScreenContent(
+    podcasts: List<Podcast>,
+    onNavigateToList: () -> Unit,
+    onSearch: ((String) -> Unit)? = null
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -73,29 +89,28 @@ fun PodcastSearchScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        var searchText by remember { mutableStateOf("") }
+        onSearch?.let {
+            var searchText by remember { mutableStateOf("") }
 
-        // Search input field
-        OutlinedTextField(
-            value = searchText,
-            onValueChange = { searchText = it },
-            label = { Text("Search podcasts...") },
-            placeholder = { Text("Enter podcast name or topic") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
+            // Search input field
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                label = { Text("Search podcasts...") },
+                placeholder = { Text("Enter podcast name or topic") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Search button
-        Button(
-            onClick = {
-                viewModel.updateSearchQuery(searchText)
-                viewModel.searchPodcasts()
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Search")
+            // Search button
+            Button(
+                onClick = { onSearch(searchText) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Search")
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -199,5 +214,29 @@ private fun PodcastImage(podcast: Podcast) {
 fun PodcastSearchScreenPreview() {
     MaterialTheme {
         PodcastSearchScreen(onNavigateToList = {})
+    }
+}
+
+@Preview
+@Composable
+fun PodcastSearchScreenWithResultsPreview() {
+    val samplePodcasts = (1..10).map { index ->
+        Podcast(
+            trackId = index.toLong(),
+            trackName = "Sample Podcast $index",
+            artistName = "Creator $index",
+            collectionName = "Collection $index",
+            trackViewUrl = "https://example.com/podcast$index",
+            artworkUrl100 = "https://example.com/artwork$index.jpg",
+            primaryGenreName = if (index % 2 == 0) "Technology" else "Comedy",
+            trackCount = (10..100).random()
+        )
+    }
+    
+    MaterialTheme {
+        PodcastSearchScreenContent(
+            podcasts = samplePodcasts,
+            onNavigateToList = {}
+        )
     }
 }
