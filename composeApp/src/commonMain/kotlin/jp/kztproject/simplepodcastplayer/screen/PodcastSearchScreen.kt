@@ -157,15 +157,6 @@ fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                podcast.primaryGenreName?.let { genre ->
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = genre,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-
                 podcast.trackCount?.let { count ->
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
