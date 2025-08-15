@@ -165,6 +165,15 @@ fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
                         color = MaterialTheme.colorScheme.primary,
                     )
                 }
+
+                podcast.trackCount?.let { count ->
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "$count episodes",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
