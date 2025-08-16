@@ -1,10 +1,8 @@
 package jp.kztproject.simplepodcastplayer.data
 
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.shouldBe
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 class PodcastTest {
 
@@ -22,7 +20,8 @@ class PodcastTest {
             artworkUrl60 = null,
             artworkUrl30 = null,
         )
-        assertNull(podcast.bestArtworkUrl())
+
+        podcast.bestArtworkUrl().shouldBeNull()
     }
 
     @Test
@@ -33,7 +32,8 @@ class PodcastTest {
             artworkUrl60 = null,
             artworkUrl30 = null,
         )
-        assertEquals(url100, podcast.bestArtworkUrl())
+
+        podcast.bestArtworkUrl() shouldBe url100
     }
 
     @Test
@@ -44,7 +44,8 @@ class PodcastTest {
             artworkUrl60 = url60,
             artworkUrl30 = null,
         )
-        assertEquals(url60, podcast.bestArtworkUrl())
+
+        podcast.bestArtworkUrl() shouldBe url60
     }
 
     @Test
@@ -55,7 +56,8 @@ class PodcastTest {
             artworkUrl60 = null,
             artworkUrl30 = url30,
         )
-        assertEquals(url30, podcast.bestArtworkUrl())
+
+        podcast.bestArtworkUrl() shouldBe url30
     }
 
     @Test
@@ -67,7 +69,8 @@ class PodcastTest {
             artworkUrl60 = url60,
             artworkUrl30 = null,
         )
-        assertEquals(url100, podcast.bestArtworkUrl())
+
+        podcast.bestArtworkUrl() shouldBe url100
     }
 
     @Test
@@ -79,7 +82,8 @@ class PodcastTest {
             artworkUrl60 = null,
             artworkUrl30 = url30,
         )
-        assertEquals(url100, podcast.bestArtworkUrl())
+
+        podcast.bestArtworkUrl() shouldBe url100
     }
 
     @Test
@@ -91,7 +95,8 @@ class PodcastTest {
             artworkUrl60 = url60,
             artworkUrl30 = url30,
         )
-        assertEquals(url60, podcast.bestArtworkUrl())
+
+        podcast.bestArtworkUrl() shouldBe url60
     }
 
     @Test
@@ -104,7 +109,8 @@ class PodcastTest {
             artworkUrl60 = url60,
             artworkUrl30 = url30,
         )
-        assertEquals(url100, podcast.bestArtworkUrl())
+
+        podcast.bestArtworkUrl() shouldBe url100
     }
 
     // hasArtwork property tests - all conditions covered
@@ -115,7 +121,8 @@ class PodcastTest {
             artworkUrl60 = null,
             artworkUrl30 = null,
         )
-        assertFalse(podcast.hasArtwork)
+
+        podcast.hasArtwork shouldBe false
     }
 
     @Test
@@ -125,7 +132,8 @@ class PodcastTest {
             artworkUrl60 = null,
             artworkUrl30 = null,
         )
-        assertTrue(podcast.hasArtwork)
+
+        podcast.hasArtwork shouldBe true
     }
 
     @Test
@@ -135,7 +143,8 @@ class PodcastTest {
             artworkUrl60 = "https://example.com/60.jpg",
             artworkUrl30 = null,
         )
-        assertTrue(podcast.hasArtwork)
+
+        podcast.hasArtwork shouldBe true
     }
 
     @Test
@@ -145,7 +154,8 @@ class PodcastTest {
             artworkUrl60 = null,
             artworkUrl30 = "https://example.com/30.jpg",
         )
-        assertTrue(podcast.hasArtwork)
+
+        podcast.hasArtwork shouldBe true
     }
 
     @Test
@@ -155,7 +165,8 @@ class PodcastTest {
             artworkUrl60 = "https://example.com/60.jpg",
             artworkUrl30 = null,
         )
-        assertTrue(podcast.hasArtwork)
+
+        podcast.hasArtwork shouldBe true
     }
 
     @Test
@@ -165,6 +176,7 @@ class PodcastTest {
             artworkUrl60 = "https://example.com/60.jpg",
             artworkUrl30 = "https://example.com/30.jpg",
         )
-        assertTrue(podcast.hasArtwork)
+
+        podcast.hasArtwork shouldBe true
     }
 }
