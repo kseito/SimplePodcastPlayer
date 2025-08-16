@@ -32,10 +32,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
@@ -46,6 +48,22 @@ fun PodcastSearchScreen(
 ) {
     val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
 
+    PodcastSearchScreenContent(
+        podcasts = podcasts,
+        onNavigateToList = onNavigateToList,
+        onSearch = { query ->
+            viewModel.updateSearchQuery(query)
+            viewModel.searchPodcasts()
+        },
+    )
+}
+
+@Composable
+private fun PodcastSearchScreenContent(
+    podcasts: List<Podcast>,
+    onNavigateToList: () -> Unit,
+    onSearch: ((String) -> Unit)? = null,
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -71,29 +89,28 @@ fun PodcastSearchScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        var searchText by remember { mutableStateOf("") }
+        onSearch?.let {
+            var searchText by remember { mutableStateOf("") }
 
-        // Search input field
-        OutlinedTextField(
-            value = searchText,
-            onValueChange = { searchText = it },
-            label = { Text("Search podcasts...") },
-            placeholder = { Text("Enter podcast name or topic") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true,
-        )
+            // Search input field
+            OutlinedTextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                label = { Text("Search podcasts...") },
+                placeholder = { Text("Enter podcast name or topic") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Search button
-        Button(
-            onClick = {
-                viewModel.updateSearchQuery(searchText)
-                viewModel.searchPodcasts()
-            },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Text("Search")
+            // Search button
+            Button(
+                onClick = { onSearch(searchText) },
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("Search")
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -130,19 +147,7 @@ fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Podcast artwork placeholder
-            Box(
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    text = "🎧",
-                    style = MaterialTheme.typography.headlineLarge,
-                )
-            }
+            PodcastImage(podcast)
 
             Spacer(modifier = Modifier.width(12.dp))
 
@@ -167,15 +172,39 @@ fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                podcast.primaryGenreName?.let { genre ->
+                podcast.trackCount?.let { count ->
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = genre,
+                        text = "$count episodes",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun PodcastImage(podcast: Podcast) {
+    Box(
+        modifier = Modifier
+            .size(80.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center,
+    ) {
+        AsyncImage(
+            model = podcast.bestArtworkUrl(),
+            contentDescription = "Podcast artwork for ${podcast.trackName}",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        if (!podcast.hasArtwork) {
+            Text(
+                text = "🎧",
+                style = MaterialTheme.typography.headlineLarge,
+            )
         }
     }
 }
@@ -185,5 +214,29 @@ fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
 fun PodcastSearchScreenPreview() {
     MaterialTheme {
         PodcastSearchScreen(onNavigateToList = {})
+    }
+}
+
+@Preview
+@Composable
+fun PodcastSearchScreenWithResultsPreview() {
+    val samplePodcasts = (1..10).map { index ->
+        Podcast(
+            trackId = index.toLong(),
+            trackName = "Sample Podcast $index",
+            artistName = "Creator $index",
+            collectionName = "Collection $index",
+            trackViewUrl = "https://example.com/podcast$index",
+            artworkUrl100 = "https://example.com/artwork$index.jpg",
+            primaryGenreName = if (index % 2 == 0) "Technology" else "Comedy",
+            trackCount = (10..100).random(),
+        )
+    }
+
+    MaterialTheme {
+        PodcastSearchScreenContent(
+            podcasts = samplePodcasts,
+            onNavigateToList = {},
+        )
     }
 }
