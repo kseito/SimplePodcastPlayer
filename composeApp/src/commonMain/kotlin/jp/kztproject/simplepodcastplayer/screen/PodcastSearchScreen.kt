@@ -229,7 +229,7 @@ fun PodcastSearchScreenWithResultsPreview() {
             trackViewUrl = "https://example.com/podcast$index",
             artworkUrl100 = "https://example.com/artwork$index.jpg",
             primaryGenreName = if (index % 2 == 0) "Technology" else "Comedy",
-            trackCount = (10..100).random()
+            trackCount = (10..100).random(),
         )
     }
 

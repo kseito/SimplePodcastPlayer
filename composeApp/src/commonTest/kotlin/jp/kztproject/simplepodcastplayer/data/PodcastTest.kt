@@ -11,7 +11,7 @@ class PodcastTest {
     private fun createBasePodcast() = Podcast(
         trackId = 1L,
         trackName = "Test Podcast",
-        artistName = "Test Artist"
+        artistName = "Test Artist",
     )
 
     // bestArtworkUrl() method tests - all conditions covered
@@ -20,7 +20,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = null,
             artworkUrl60 = null,
-            artworkUrl30 = null
+            artworkUrl30 = null,
         )
         assertNull(podcast.bestArtworkUrl())
     }
@@ -31,7 +31,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = url100,
             artworkUrl60 = null,
-            artworkUrl30 = null
+            artworkUrl30 = null,
         )
         assertEquals(url100, podcast.bestArtworkUrl())
     }
@@ -42,7 +42,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = null,
             artworkUrl60 = url60,
-            artworkUrl30 = null
+            artworkUrl30 = null,
         )
         assertEquals(url60, podcast.bestArtworkUrl())
     }
@@ -53,7 +53,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = null,
             artworkUrl60 = null,
-            artworkUrl30 = url30
+            artworkUrl30 = url30,
         )
         assertEquals(url30, podcast.bestArtworkUrl())
     }
@@ -65,7 +65,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = url100,
             artworkUrl60 = url60,
-            artworkUrl30 = null
+            artworkUrl30 = null,
         )
         assertEquals(url100, podcast.bestArtworkUrl())
     }
@@ -77,7 +77,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = url100,
             artworkUrl60 = null,
-            artworkUrl30 = url30
+            artworkUrl30 = url30,
         )
         assertEquals(url100, podcast.bestArtworkUrl())
     }
@@ -89,7 +89,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = null,
             artworkUrl60 = url60,
-            artworkUrl30 = url30
+            artworkUrl30 = url30,
         )
         assertEquals(url60, podcast.bestArtworkUrl())
     }
@@ -102,7 +102,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = url100,
             artworkUrl60 = url60,
-            artworkUrl30 = url30
+            artworkUrl30 = url30,
         )
         assertEquals(url100, podcast.bestArtworkUrl())
     }
@@ -113,7 +113,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = null,
             artworkUrl60 = null,
-            artworkUrl30 = null
+            artworkUrl30 = null,
         )
         assertFalse(podcast.hasArtwork)
     }
@@ -123,7 +123,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = "https://example.com/100.jpg",
             artworkUrl60 = null,
-            artworkUrl30 = null
+            artworkUrl30 = null,
         )
         assertTrue(podcast.hasArtwork)
     }
@@ -133,7 +133,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = null,
             artworkUrl60 = "https://example.com/60.jpg",
-            artworkUrl30 = null
+            artworkUrl30 = null,
         )
         assertTrue(podcast.hasArtwork)
     }
@@ -143,7 +143,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = null,
             artworkUrl60 = null,
-            artworkUrl30 = "https://example.com/30.jpg"
+            artworkUrl30 = "https://example.com/30.jpg",
         )
         assertTrue(podcast.hasArtwork)
     }
@@ -153,7 +153,7 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = "https://example.com/100.jpg",
             artworkUrl60 = "https://example.com/60.jpg",
-            artworkUrl30 = null
+            artworkUrl30 = null,
         )
         assertTrue(podcast.hasArtwork)
     }
@@ -163,9 +163,8 @@ class PodcastTest {
         val podcast = createBasePodcast().copy(
             artworkUrl100 = "https://example.com/100.jpg",
             artworkUrl60 = "https://example.com/60.jpg",
-            artworkUrl30 = "https://example.com/30.jpg"
+            artworkUrl30 = "https://example.com/30.jpg",
         )
         assertTrue(podcast.hasArtwork)
     }
-
 }
