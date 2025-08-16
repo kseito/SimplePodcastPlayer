@@ -57,4 +57,9 @@ data class Podcast(
     val genreIds: List<String>? = null,
     @SerialName("genres")
     val genres: List<String>? = null,
-)
+) {
+    fun bestArtworkUrl(): String? = artworkUrl100 ?: artworkUrl60 ?: artworkUrl30
+
+    val hasArtwork: Boolean
+        get() = listOf(artworkUrl100, artworkUrl60, artworkUrl30).any { it != null }
+}

@@ -54,7 +54,7 @@ fun PodcastSearchScreen(
         onSearch = { query ->
             viewModel.updateSearchQuery(query)
             viewModel.searchPodcasts()
-        }
+        },
     )
 }
 
@@ -62,7 +62,7 @@ fun PodcastSearchScreen(
 private fun PodcastSearchScreenContent(
     podcasts: List<Podcast>,
     onNavigateToList: () -> Unit,
-    onSearch: ((String) -> Unit)? = null
+    onSearch: ((String) -> Unit)? = null,
 ) {
     Column(
         modifier = Modifier
@@ -195,12 +195,12 @@ private fun PodcastImage(podcast: Podcast) {
         contentAlignment = Alignment.Center,
     ) {
         AsyncImage(
-            model = podcast.artworkUrl100 ?: podcast.artworkUrl60 ?: podcast.artworkUrl30,
+            model = podcast.bestArtworkUrl(),
             contentDescription = "Podcast artwork for ${podcast.trackName}",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
         )
-        if (podcast.artworkUrl100 == null && podcast.artworkUrl60 == null && podcast.artworkUrl30 == null) {
+        if (!podcast.hasArtwork) {
             Text(
                 text = "🎧",
                 style = MaterialTheme.typography.headlineLarge,
@@ -232,11 +232,11 @@ fun PodcastSearchScreenWithResultsPreview() {
             trackCount = (10..100).random()
         )
     }
-    
+
     MaterialTheme {
         PodcastSearchScreenContent(
             podcasts = samplePodcasts,
-            onNavigateToList = {}
+            onNavigateToList = {},
         )
     }
 }
