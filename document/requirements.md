@@ -95,6 +95,46 @@ commonMain/
 4. **PlayerScreen** (新規): フルスクリーン音声プレイヤー
 5. **HistoryScreen** (新規): 再生履歴表示
 
+### PodcastDetailScreen 詳細仕様
+
+#### 画面構成要素
+- **ヘッダー部分**
+  - 戻るボタン（←）
+  - 画面タイトル「Podcast Detail」
+- **ポッドキャスト情報部分**
+  - サムネイル画像（200dp × 200dp）
+    - `bestArtworkUrl()`を使用して最高品質の画像を表示
+    - 画像がない場合は🎧アイコンを表示
+  - タイトル（podcast.trackName）
+    - Typography: headlineSmall
+    - 最大2行、省略記号で切り詰め
+  - 著者（podcast.artistName）
+    - Typography: bodyLarge
+    - 最大1行、省略記号で切り詰め
+    - Color: onSurfaceVariant
+  - 購読ボタン
+    - 購読済みの場合：「購読中」（無効化状態）
+    - 未購読の場合：「購読する」（アクティブ状態）
+- **エピソード一覧部分**
+  - セクションタイトル「Episodes」
+  - エピソードリスト（LazyColumn）
+    - エピソードタイトル
+    - 公開日
+    - 再生時間
+    - 再生ボタン
+
+#### 画面遷移
+- **遷移元**: PodcastSearchScreen の PodcastItem をクリック
+- **遷移パラメータ**: Podcast オブジェクト
+- **遷移先**: 
+  - 戻るボタン → PodcastSearchScreen
+  - エピソード再生ボタン → PlayerScreen（将来実装）
+
+#### 状態管理
+- 購読状態の管理
+- エピソード一覧の読み込み状態
+- 購読処理の実行状態
+
 ### ナビゲーション構成
 ```
 PodcastListScreen ←→ PodcastSearchScreen
@@ -103,6 +143,15 @@ PodcastDetailScreen ←→ PlayerScreen
        ↓
 HistoryScreen
 ```
+
+#### 詳細画面への遷移仕様
+- **PodcastSearchScreen → PodcastDetailScreen**
+  - PodcastItem に onClick ハンドラを追加
+  - Podcast オブジェクトをパラメータとして渡す
+  - ナビゲーション定義に "detail/{podcastId}" ルートを追加
+- **PodcastDetailScreen → PodcastSearchScreen**
+  - 戻るボタンまたはシステムバックボタンで前画面に戻る
+  - ナビゲーションスタックから PodcastDetailScreen を削除
 
 ## データベース設計
 
@@ -128,6 +177,17 @@ Episode {
   audioUrl: String
   duration: Long
   publishedAt: DateTime
+  listened: Boolean
+}
+
+-- エピソード表示用モデル（PodcastDetailScreen用）
+EpisodeDisplayModel {
+  id: String
+  title: String
+  description: String
+  publishedAt: String (フォーマット済み日付)
+  duration: String (フォーマット済み時間 "12:34")
+  audioUrl: String
   listened: Boolean
 }
 
@@ -183,5 +243,12 @@ PlayHistory {
 ---
 
 **作成日**: 2025-08-03
-**最終更新**: 2025-08-03
-**バージョン**: 1.0
+**最終更新**: 2025-08-16
+**バージョン**: 1.1
+
+## 更新履歴
+- **v1.1 (2025-08-16)**: PodcastDetailScreen の詳細仕様を追加
+  - 画面構成要素の定義
+  - 画面遷移仕様の追加
+  - エピソード表示用データモデルの定義
+- **v1.0 (2025-08-03)**: 初版作成
