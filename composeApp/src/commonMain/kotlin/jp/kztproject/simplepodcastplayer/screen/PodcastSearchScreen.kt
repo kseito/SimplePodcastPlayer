@@ -44,6 +44,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 @Composable
 fun PodcastSearchScreen(
     onNavigateToList: () -> Unit,
+    onNavigateToDetail: (Podcast) -> Unit,
     viewModel: PodcastSearchViewModel = viewModel { PodcastSearchViewModel() },
 ) {
     val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
@@ -51,6 +52,7 @@ fun PodcastSearchScreen(
     PodcastSearchScreenContent(
         podcasts = podcasts,
         onNavigateToList = onNavigateToList,
+        onNavigateToDetail = onNavigateToDetail,
         onSearch = { query ->
             viewModel.updateSearchQuery(query)
             viewModel.searchPodcasts()
@@ -62,6 +64,7 @@ fun PodcastSearchScreen(
 private fun PodcastSearchScreenContent(
     podcasts: List<Podcast>,
     onNavigateToList: () -> Unit,
+    onNavigateToDetail: (Podcast) -> Unit = {},
     onSearch: ((String) -> Unit)? = null,
 ) {
     Column(
@@ -121,6 +124,7 @@ private fun PodcastSearchScreenContent(
                 items(podcasts) { podcast ->
                     PodcastItem(
                         podcast = podcast,
+                        onClick = { onNavigateToDetail(podcast) },
                         modifier = Modifier.padding(bottom = 8.dp),
                     )
                 }
@@ -136,8 +140,9 @@ private fun PodcastSearchScreenContent(
 }
 
 @Composable
-fun PodcastItem(podcast: Podcast, modifier: Modifier = Modifier) {
+fun PodcastItem(podcast: Podcast, onClick: () -> Unit = {}, modifier: Modifier = Modifier) {
     Card(
+        onClick = onClick,
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
     ) {
@@ -213,7 +218,10 @@ private fun PodcastImage(podcast: Podcast) {
 @Composable
 fun PodcastSearchScreenPreview() {
     MaterialTheme {
-        PodcastSearchScreen(onNavigateToList = {})
+        PodcastSearchScreen(
+            onNavigateToList = {},
+            onNavigateToDetail = {}
+        )
     }
 }
 
@@ -237,6 +245,7 @@ fun PodcastSearchScreenWithResultsPreview() {
         PodcastSearchScreenContent(
             podcasts = samplePodcasts,
             onNavigateToList = {},
+            onNavigateToDetail = {},
         )
     }
 }
