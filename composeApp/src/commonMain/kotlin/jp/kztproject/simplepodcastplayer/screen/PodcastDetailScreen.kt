@@ -20,52 +20,78 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
-// TODO: Use ViewModel to manage state and business logic
 @Composable
-fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit) {
-    var isSubscribed by remember { mutableStateOf(false) }
-    // TODO: Replace with real episodes fetched from a data source
-    val episodes = remember { createSampleEpisodes(podcast.trackId.toString()) }
+fun PodcastDetailScreen(
+    podcast: Podcast,
+    onNavigateBack: () -> Unit,
+    viewModel: PodcastDetailViewModel = viewModel { PodcastDetailViewModel() },
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    PodcastDetailScreenContent(
-        state = PodcastDetailState(
-            podcast = podcast,
-            episodes = episodes,
-            isSubscribed = isSubscribed,
-        ),
-        actions = PodcastDetailActions(
-            onNavigateBack = onNavigateBack,
-            onSubscribe = { isSubscribed = true },
-            onPlayEpisode = { episodeId ->
-                // TODO: Navigation to PlayerScreen will be implemented in future
-            },
-        ),
-    )
+    LaunchedEffect(podcast) {
+        viewModel.initialize(podcast)
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
+    }
+
+    Box {
+        PodcastDetailScreenContent(
+            state = PodcastDetailState(
+                podcast = uiState.podcast ?: podcast,
+                episodes = uiState.episodes,
+                isSubscribed = uiState.isSubscribed,
+                isLoading = uiState.isLoading,
+                isSubscriptionLoading = uiState.isSubscriptionLoading,
+            ),
+            actions = PodcastDetailActions(
+                onNavigateBack = onNavigateBack,
+                onSubscribe = { viewModel.toggleSubscription() },
+                onPlayEpisode = { episodeId -> viewModel.playEpisode(episodeId) },
+            ),
+        )
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
 }
 
 private data class PodcastDetailState(
     val podcast: Podcast,
     val episodes: List<EpisodeDisplayModel>,
     val isSubscribed: Boolean,
+    val isLoading: Boolean = false,
+    val isSubscriptionLoading: Boolean = false,
 )
 
 private data class PodcastDetailActions(
@@ -108,6 +134,7 @@ private fun PodcastDetailScreenContent(
         PodcastInfoSection(
             podcast = state.podcast,
             isSubscribed = state.isSubscribed,
+            isSubscriptionLoading = state.isSubscriptionLoading,
             onSubscribe = actions.onSubscribe,
         )
 
@@ -116,13 +143,19 @@ private fun PodcastDetailScreenContent(
         // Episodes section
         EpisodesSection(
             episodes = state.episodes,
+            isLoading = state.isLoading,
             onPlayEpisode = actions.onPlayEpisode,
         )
     }
 }
 
 @Composable
-private fun PodcastInfoSection(podcast: Podcast, isSubscribed: Boolean, onSubscribe: () -> Unit) {
+private fun PodcastInfoSection(
+    podcast: Podcast,
+    isSubscribed: Boolean,
+    isSubscriptionLoading: Boolean,
+    onSubscribe: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -176,17 +209,28 @@ private fun PodcastInfoSection(podcast: Podcast, isSubscribed: Boolean, onSubscr
             // Subscribe button
             Button(
                 onClick = onSubscribe,
-                enabled = !isSubscribed,
+                enabled = !isSubscribed && !isSubscriptionLoading,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (isSubscribed) "購読中" else "購読する")
+                if (isSubscriptionLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    Text(if (isSubscribed) "購読中" else "購読する")
+                }
             }
         }
     }
 }
 
 @Composable
-private fun EpisodesSection(episodes: List<EpisodeDisplayModel>, onPlayEpisode: (String) -> Unit) {
+private fun EpisodesSection(
+    episodes: List<EpisodeDisplayModel>,
+    isLoading: Boolean,
+    onPlayEpisode: (String) -> Unit,
+) {
     Column {
         Text(
             text = "Episodes",
@@ -194,14 +238,25 @@ private fun EpisodesSection(episodes: List<EpisodeDisplayModel>, onPlayEpisode: 
             modifier = Modifier.padding(bottom = 12.dp),
         )
 
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            items(episodes) { episode ->
-                EpisodeItem(
-                    episode = episode,
-                    onPlay = { onPlayEpisode(episode.id) },
-                )
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        } else {
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(episodes) { episode ->
+                    EpisodeItem(
+                        episode = episode,
+                        onPlay = { onPlayEpisode(episode.id) },
+                    )
+                }
             }
         }
     }
@@ -253,21 +308,6 @@ private fun EpisodeItem(episode: EpisodeDisplayModel, onPlay: () -> Unit) {
             }
         }
     }
-}
-
-private const val SAMPLE_EPISODE_COUNT = 5
-
-private fun createSampleEpisodes(podcastId: String): List<EpisodeDisplayModel> =
-    (1..SAMPLE_EPISODE_COUNT).map { index ->
-    EpisodeDisplayModel(
-        id = "episode_${podcastId}_$index",
-        title = "Episode $index: Sample Episode Title That Might Be Long",
-        description = "This is a sample episode description for episode $index",
-        publishedAt = "Dec ${20 - index}, 2024",
-        duration = "${(30 + index * 5)}:${(10 + index * 2).toString().padStart(2, '0')}",
-        audioUrl = "https://example.com/episode$index.mp3",
-        listened = index <= 2,
-    )
 }
 
 @Preview
