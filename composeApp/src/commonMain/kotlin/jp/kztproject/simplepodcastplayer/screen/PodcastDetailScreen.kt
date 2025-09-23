@@ -101,10 +101,7 @@ private data class PodcastDetailActions(
 )
 
 @Composable
-private fun PodcastDetailScreenContent(
-    state: PodcastDetailState,
-    actions: PodcastDetailActions,
-) {
+private fun PodcastDetailScreenContent(state: PodcastDetailState, actions: PodcastDetailActions) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -226,11 +223,7 @@ private fun PodcastInfoSection(
 }
 
 @Composable
-private fun EpisodesSection(
-    episodes: List<EpisodeDisplayModel>,
-    isLoading: Boolean,
-    onPlayEpisode: (String) -> Unit,
-) {
+private fun EpisodesSection(episodes: List<EpisodeDisplayModel>, isLoading: Boolean, onPlayEpisode: (String) -> Unit) {
     Column {
         Text(
             text = "Episodes",

@@ -220,7 +220,7 @@ fun PodcastSearchScreenPreview() {
     MaterialTheme {
         PodcastSearchScreen(
             onNavigateToList = {},
-            onNavigateToDetail = {}
+            onNavigateToDetail = {},
         )
     }
 }

@@ -43,7 +43,7 @@ class RssParser {
                         enclosure = enclosure,
                         duration = duration,
                         guid = guid.ifEmpty { title },
-                    )
+                    ),
                 )
             }
 
@@ -118,80 +118,72 @@ class RssParser {
         return tag.substring(valueStart, endIndex)
     }
 
-    private fun cleanText(text: String): String {
-        return text
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&amp;", "&")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'")
-            .replace("<![CDATA[", "")
-            .replace("]]>", "")
-            .trim()
-    }
+    private fun cleanText(text: String): String = text
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&amp;", "&")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'")
+        .replace("<![CDATA[", "")
+        .replace("]]>", "")
+        .trim()
 }
 
-fun RssChannel.toEpisodes(): List<ParsedEpisode> {
-    return items.mapIndexed { index, item ->
-        ParsedEpisode(
-            id = item.guid.ifEmpty { "${title}_$index" },
-            title = item.title,
-            description = item.description,
-            publishedAt = formatRssDate(item.pubDate),
-            audioUrl = item.enclosure?.url ?: "",
-            duration = parseItunesDuration(item.duration),
-        )
-    }
+fun RssChannel.toEpisodes(): List<ParsedEpisode> = items.mapIndexed { index, item ->
+    ParsedEpisode(
+        id = item.guid.ifEmpty { "${title}_$index" },
+        title = item.title,
+        description = item.description,
+        publishedAt = formatRssDate(item.pubDate),
+        audioUrl = item.enclosure?.url ?: "",
+        duration = parseItunesDuration(item.duration),
+    )
 }
 
-private fun formatRssDate(rssDate: String): String {
-    return try {
-        // RSS dates are typically in format: "Wed, 15 Dec 2024 10:00:00 GMT"
-        if (rssDate.contains(",")) {
-            val parts = rssDate.split(",")[1].trim().split(" ")
-            if (parts.size >= DATE_PARTS_MIN_SIZE) {
-                val day = parts[0]
-                val month = parts[1]
-                val year = parts[2]
-                "$month $day, $year"
-            } else {
-                rssDate
-            }
+private fun formatRssDate(rssDate: String): String = try {
+    // RSS dates are typically in format: "Wed, 15 Dec 2024 10:00:00 GMT"
+    if (rssDate.contains(",")) {
+        val parts = rssDate.split(",")[1].trim().split(" ")
+        if (parts.size >= DATE_PARTS_MIN_SIZE) {
+            val day = parts[0]
+            val month = parts[1]
+            val year = parts[2]
+            "$month $day, $year"
         } else {
             rssDate
         }
-    } catch (_: Exception) {
+    } else {
         rssDate
     }
+} catch (_: Exception) {
+    rssDate
 }
 
-private fun parseItunesDuration(duration: String): Long {
-    return try {
-        if (duration.contains(":")) {
-            val parts = duration.split(":")
-            when (parts.size) {
-                2 -> {
-                    // MM:SS format
-                    val minutes = parts[0].toLongOrNull() ?: 0
-                    val seconds = parts[1].toLongOrNull() ?: 0
-                    minutes * SECONDS_PER_MINUTE + seconds
-                }
-                TIME_PARTS_HMS -> {
-                    // HH:MM:SS format
-                    val hours = parts[0].toLongOrNull() ?: 0
-                    val minutes = parts[1].toLongOrNull() ?: 0
-                    val seconds = parts[2].toLongOrNull() ?: 0
-                    hours * SECONDS_PER_HOUR + minutes * SECONDS_PER_MINUTE + seconds
-                }
-                else -> 0
+private fun parseItunesDuration(duration: String): Long = try {
+    if (duration.contains(":")) {
+        val parts = duration.split(":")
+        when (parts.size) {
+            2 -> {
+                // MM:SS format
+                val minutes = parts[0].toLongOrNull() ?: 0
+                val seconds = parts[1].toLongOrNull() ?: 0
+                minutes * SECONDS_PER_MINUTE + seconds
             }
-        } else {
-            // Assume seconds
-            duration.toLongOrNull() ?: 0
+            TIME_PARTS_HMS -> {
+                // HH:MM:SS format
+                val hours = parts[0].toLongOrNull() ?: 0
+                val minutes = parts[1].toLongOrNull() ?: 0
+                val seconds = parts[2].toLongOrNull() ?: 0
+                hours * SECONDS_PER_HOUR + minutes * SECONDS_PER_MINUTE + seconds
+            }
+            else -> 0
         }
-    } catch (_: Exception) {
-        0
+    } else {
+        // Assume seconds
+        duration.toLongOrNull() ?: 0
     }
+} catch (_: Exception) {
+    0
 }
 
 private const val SECONDS_PER_MINUTE = 60L

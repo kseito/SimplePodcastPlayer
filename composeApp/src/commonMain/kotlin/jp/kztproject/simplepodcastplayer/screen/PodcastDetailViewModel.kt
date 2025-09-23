@@ -20,7 +20,7 @@ class PodcastDetailViewModel : ViewModel() {
     fun initialize(podcast: Podcast) {
         _uiState.value = _uiState.value.copy(
             podcast = podcast,
-            isLoading = true
+            isLoading = true,
         )
         loadEpisodes(podcast)
         checkSubscriptionStatus(podcast)
@@ -32,7 +32,7 @@ class PodcastDetailViewModel : ViewModel() {
 
         _uiState.value = currentState.copy(
             isSubscribed = newSubscriptionStatus,
-            isSubscriptionLoading = true
+            isSubscriptionLoading = true,
         )
 
         viewModelScope.launch {
@@ -42,13 +42,13 @@ class PodcastDetailViewModel : ViewModel() {
                 kotlinx.coroutines.delay(SUBSCRIPTION_DELAY_MS)
 
                 _uiState.value = _uiState.value.copy(
-                    isSubscriptionLoading = false
+                    isSubscriptionLoading = false,
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isSubscribed = !newSubscriptionStatus,
                     isSubscriptionLoading = false,
-                    error = "Failed to update subscription: ${e.message}"
+                    error = "Failed to update subscription: ${e.message}",
                 )
             }
         }
@@ -68,7 +68,7 @@ class PodcastDetailViewModel : ViewModel() {
             try {
                 val episodes = if (podcast.feedUrl.isNullOrBlank()) {
                     _uiState.value = _uiState.value.copy(
-                        error = "No RSS feed URL available for this podcast"
+                        error = "No RSS feed URL available for this podcast",
                     )
                     emptyList()
                 } else {
@@ -79,7 +79,7 @@ class PodcastDetailViewModel : ViewModel() {
                     } else {
                         val error = result.exceptionOrNull()
                         _uiState.value = _uiState.value.copy(
-                            error = "Failed to load RSS feed: ${error?.message}"
+                            error = "Failed to load RSS feed: ${error?.message}",
                         )
                         emptyList()
                     }
@@ -87,12 +87,12 @@ class PodcastDetailViewModel : ViewModel() {
 
                 _uiState.value = _uiState.value.copy(
                     episodes = episodes,
-                    isLoading = false
+                    isLoading = false,
                 )
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Failed to load episodes: ${e.message}"
+                    error = "Failed to load episodes: ${e.message}",
                 )
             }
         }
@@ -107,7 +107,7 @@ class PodcastDetailViewModel : ViewModel() {
                 val isSubscribed = false
 
                 _uiState.value = _uiState.value.copy(
-                    isSubscribed = isSubscribed
+                    isSubscribed = isSubscribed,
                 )
             } catch (_: Exception) {
                 // Ignore subscription check errors for now

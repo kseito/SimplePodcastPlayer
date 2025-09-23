@@ -22,7 +22,7 @@ class RssService {
 
             if (!response.status.value.toString().startsWith("2")) {
                 return Result.failure(
-                    Exception("Failed to fetch feed: HTTP ${response.status.value}")
+                    Exception("Failed to fetch feed: HTTP ${response.status.value}"),
                 )
             }
 

@@ -3,11 +3,7 @@ package jp.kztproject.simplepodcastplayer.data
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class RssChannel(
-    val title: String = "",
-    val description: String = "",
-    val items: List<RssItem> = emptyList(),
-)
+data class RssChannel(val title: String = "", val description: String = "", val items: List<RssItem> = emptyList())
 
 @Serializable
 data class RssItem(
@@ -20,11 +16,7 @@ data class RssItem(
 )
 
 @Serializable
-data class RssEnclosure(
-    val url: String = "",
-    val type: String = "",
-    val length: String = "",
-)
+data class RssEnclosure(val url: String = "", val type: String = "", val length: String = "")
 
 data class ParsedEpisode(
     val id: String,
