@@ -2,6 +2,7 @@ package jp.kztproject.simplepodcastplayer.util
 
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
+import jp.kztproject.simplepodcastplayer.data.ParsedEpisode
 
 private const val SECONDS_PER_HOUR = 3600L
 private const val SECONDS_PER_MINUTE = 60L
@@ -17,6 +18,16 @@ fun Episode.toDisplayModel(): EpisodeDisplayModel = EpisodeDisplayModel(
     duration = formatDuration(duration),
     audioUrl = audioUrl,
     listened = listened,
+)
+
+fun ParsedEpisode.toDisplayModel(): EpisodeDisplayModel = EpisodeDisplayModel(
+    id = id,
+    title = title,
+    description = description,
+    publishedAt = publishedAt, // Already formatted by RSS parser
+    duration = formatDuration(duration),
+    audioUrl = audioUrl,
+    listened = false, // Default to not listened for RSS episodes
 )
 
 fun formatDuration(durationInSeconds: Long): String {

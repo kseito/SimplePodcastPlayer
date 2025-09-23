@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.data.RssService
+import jp.kztproject.simplepodcastplayer.util.toDisplayModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,6 +14,8 @@ import kotlinx.coroutines.launch
 class PodcastDetailViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(PodcastDetailUiState())
     val uiState: StateFlow<PodcastDetailUiState> = _uiState.asStateFlow()
+
+    private val rssService = RssService()
 
     fun initialize(podcast: Podcast) {
         _uiState.value = _uiState.value.copy(
@@ -52,7 +56,7 @@ class PodcastDetailViewModel : ViewModel() {
 
     @Suppress("UnusedParameter")
     fun playEpisode(episodeId: String) {
-        // TODO: Implement episode playback logic when PlayerScreen is added
+        // Future: Implement episode playback logic when PlayerScreen is added
     }
 
     fun clearError() {
@@ -62,10 +66,24 @@ class PodcastDetailViewModel : ViewModel() {
     private fun loadEpisodes(podcast: Podcast) {
         viewModelScope.launch {
             try {
-                // Generate sample episodes for demonstration
-                // Future: Replace with actual data source
-                // TODO: Replace with real episodes fetched from a data source
-                val episodes = createSampleEpisodes(podcast.trackId.toString())
+                val episodes = if (podcast.feedUrl.isNullOrBlank()) {
+                    _uiState.value = _uiState.value.copy(
+                        error = "No RSS feed URL available for this podcast"
+                    )
+                    emptyList()
+                } else {
+                    // Fetch real episodes from RSS feed
+                    val result = rssService.fetchEpisodes(podcast.feedUrl)
+                    if (result.isSuccess) {
+                        result.getOrNull()?.map { it.toDisplayModel() } ?: emptyList()
+                    } else {
+                        val error = result.exceptionOrNull()
+                        _uiState.value = _uiState.value.copy(
+                            error = "Failed to load RSS feed: ${error?.message}"
+                        )
+                        emptyList()
+                    }
+                }
 
                 _uiState.value = _uiState.value.copy(
                     episodes = episodes,
@@ -97,21 +115,12 @@ class PodcastDetailViewModel : ViewModel() {
         }
     }
 
-    private fun createSampleEpisodes(podcastId: String): List<EpisodeDisplayModel> =
-        (1..SAMPLE_EPISODE_COUNT).map { index ->
-            EpisodeDisplayModel(
-                id = "episode_${podcastId}_$index",
-                title = "Episode $index: Sample Episode Title That Might Be Long",
-                description = "This is a sample episode description for episode $index",
-                publishedAt = "Dec ${20 - index}, 2024",
-                duration = "${(30 + index * 5)}:${(10 + index * 2).toString().padStart(2, '0')}",
-                audioUrl = "https://example.com/episode$index.mp3",
-                listened = index <= 2,
-            )
-        }
+    override fun onCleared() {
+        super.onCleared()
+        rssService.close()
+    }
 
     companion object {
-        private const val SAMPLE_EPISODE_COUNT = 5
         private const val SUBSCRIPTION_DELAY_MS = 500L
     }
 }
