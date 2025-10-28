@@ -135,6 +135,173 @@ commonMain/
 - エピソード一覧の読み込み状態
 - 購読処理の実行状態
 
+### PlayerScreen 詳細仕様
+
+#### 技術的アプローチ
+PlayerScreenは、iOS/Androidそれぞれのネイティブコンポーネントを使用して実装します。
+- **共通部分**: ViewModel、状態管理、ビジネスロジックは `commonMain` で共通化
+- **UI層**: プラットフォーム固有のネイティブUIコンポーネントを使用
+  - Android: Jetpack Compose + ExoPlayer
+  - iOS: SwiftUI/UIKit + AVPlayer
+
+#### 画面構成要素
+
+##### 共通UI要素（両プラットフォーム共通）
+- **ヘッダー部分**
+  - 閉じるボタン（×または下向き矢印）
+  - 画面タイトル「Now Playing」
+
+- **エピソード情報部分**
+  - エピソードアートワーク（300dp × 300dp）
+    - ポッドキャストのカバー画像を表示
+    - 画像がない場合はデフォルトアイコン表示
+  - エピソードタイトル
+    - Typography: headlineMedium（Android）/ Title（iOS）
+    - 最大2行、省略記号で切り詰め
+  - ポッドキャスト名
+    - Typography: bodyLarge（Android）/ Headline（iOS）
+    - 最大1行、省略記号で切り詰め
+    - 半透明表示
+  - エピソード説明
+    - Typography: bodyMedium（Android）/ Body（iOS）
+    - 最大3行、省略記号で切り詰め
+    - 半透明表示
+    - スクロール可能（オプション）
+
+- **再生コントロール部分**
+  - プログレスバー
+    - 現在の再生位置表示（00:00形式）
+    - トータル時間表示（00:00形式）
+    - スライダーで再生位置の手動調整
+  - メインコントロールボタン（中央に配置）
+    - 15秒戻るボタン
+    - 再生/一時停止ボタン（大きめ、アイコン切り替え）
+    - 15秒進むボタン
+  - 追加コントロール
+    - 再生速度調整ボタン（0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x）（オプション）
+
+#### プラットフォーム別実装
+
+##### Android実装
+- **使用コンポーネント**
+  - Jetpack Compose: UI構築
+  - ExoPlayer: 音声再生エンジン
+  - Media3: MediaSession対応
+  - Material3: デザインコンポーネント
+
+- **画面実装場所**
+  - `composeApp/src/androidMain/kotlin/.../screen/PlayerScreen.kt`
+  - Composable関数として実装
+
+- **プレイヤーサービス**
+  - `PlaybackService` (Foreground Service)
+  - MediaSessionServiceを継承
+  - 通知領域での再生制御対応
+
+- **プラットフォーム固有機能**
+  - ロック画面での再生制御
+
+##### iOS実装
+- **使用コンポーネント**
+  - SwiftUI: UI構築（推奨）
+  - AVPlayer: 音声再生エンジン
+  - AVFoundation: メディア管理
+  - MediaPlayer Framework: Control Center連携
+
+- **画面実装場所**
+  - `iosApp/iosApp/Screen/PlayerView.swift`
+  - SwiftUI Viewとして実装
+
+- **プレイヤー管理**
+  - `AudioPlayerManager` (Singleton)
+  - AVPlayerを管理
+  - バックグラウンド再生対応
+  - Remote Command Center連携
+
+- **プラットフォーム固有機能**
+  - Control Centerでの再生制御
+  - ロック画面での再生制御
+
+#### 状態管理（commonMain）
+
+##### PlayerViewModel
+`composeApp/src/commonMain/kotlin/.../viewmodel/PlayerViewModel.kt`
+
+```kotlin
+data class PlayerUiState(
+    val episode: Episode?,
+    val isPlaying: Boolean = false,
+    val currentPosition: Long = 0L,
+    val duration: Long = 0L,
+    val playbackSpeed: Float = 1.0f,
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
+
+interface PlayerViewModel {
+    val uiState: StateFlow<PlayerUiState>
+
+    fun play()
+    fun pause()
+    fun seekTo(position: Long)
+    fun skipForward(seconds: Int = 15)
+    fun skipBackward(seconds: Int = 15)
+    fun setPlaybackSpeed(speed: Float)
+    fun loadEpisode(episode: Episode)
+    fun release()
+}
+```
+
+##### プラットフォーム別実装
+- **Android**: `androidMain` で `PlayerViewModel` を実装し、ExoPlayerと連携
+- **iOS**: iosAppプロジェクトで `PlayerViewModel` プロトコルに準拠したクラスを実装し、AVPlayerと連携
+
+#### 画面遷移
+- **遷移元**:
+  - PodcastDetailScreen のエピソード再生ボタン
+  - ミニプレイヤー（他の画面の下部に表示、将来実装）
+- **遷移パラメータ**: Episode オブジェクト
+- **遷移先**:
+  - 閉じるボタン → 前の画面に戻る（ナビゲーションスタックをpop）
+
+#### 遷移仕様
+- **PodcastDetailScreen → PlayerScreen**
+  - エピソードアイテムの再生ボタンをタップ
+  - Episode オブジェクトをパラメータとして渡す
+  - モーダル遷移（フルスクリーン）
+- **PlayerScreen → 前画面**
+  - 閉じるボタンまたはスワイプダウンジェスチャー
+  - 再生は継続（バックグラウンド再生）
+
+#### バックグラウンド再生仕様
+
+##### Android
+- Foreground Serviceとして実行
+- 通知領域に再生コントロール表示
+- 再生中は通知を表示し続ける
+- MediaSessionでシステムメディアコントロールに統合
+
+##### iOS
+- Background Modes（Audio）を有効化
+- Now Playing Info Centerに再生情報を設定
+- Remote Command Centerでシステムコントロールに対応
+- Control Centerとロック画面で再生制御可能
+
+#### エラーハンドリング
+- ネットワークエラー時
+  - エラーメッセージ表示
+  - リトライボタン表示
+- 再生エラー時
+  - エラーメッセージ表示
+  - 前画面に戻るオプション
+- ストリームURLが無効な場合
+  - 「このエピソードは再生できません」メッセージ表示
+
+#### 再生位置の保存
+- エピソード再生中の位置を定期的にデータベースに保存
+- アプリ再起動時に前回の再生位置から再開可能
+- 再生完了時（95%以上再生）は `listened = true` に更新
+
 ### ナビゲーション構成
 ```
 PodcastListScreen ←→ PodcastSearchScreen
@@ -243,10 +410,19 @@ PlayHistory {
 ---
 
 **作成日**: 2025-08-03
-**最終更新**: 2025-08-16
-**バージョン**: 1.1
+**最終更新**: 2025-10-29
+**バージョン**: 1.2
 
 ## 更新履歴
+- **v1.2 (2025-10-29)**: PlayerScreen の詳細仕様を追加
+  - 技術的アプローチの定義（iOS/Androidネイティブコンポーネント使用）
+  - 画面構成要素の定義（共通UI要素）
+  - プラットフォーム別実装仕様（Android: Compose + ExoPlayer, iOS: SwiftUI + AVPlayer）
+  - 状態管理の定義（commonMainでのViewModel）
+  - 画面遷移仕様の追加
+  - バックグラウンド再生仕様の定義
+  - エラーハンドリングの定義
+  - 再生位置保存仕様の追加
 - **v1.1 (2025-08-16)**: PodcastDetailScreen の詳細仕様を追加
   - 画面構成要素の定義
   - 画面遷移仕様の追加
