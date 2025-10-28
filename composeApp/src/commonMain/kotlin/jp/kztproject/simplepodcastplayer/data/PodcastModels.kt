@@ -63,3 +63,33 @@ data class Podcast(
     val hasArtwork: Boolean
         get() = listOf(artworkUrl100, artworkUrl60, artworkUrl30).any { it != null }
 }
+
+@Serializable
+data class Episode(
+    @SerialName("id")
+    val id: String,
+    @SerialName("podcastId")
+    val podcastId: String,
+    @SerialName("title")
+    val title: String,
+    @SerialName("description")
+    val description: String,
+    @SerialName("audioUrl")
+    val audioUrl: String,
+    @SerialName("duration")
+    val duration: Long,
+    @SerialName("publishedAt")
+    val publishedAt: String,
+    @SerialName("listened")
+    val listened: Boolean = false,
+)
+
+data class EpisodeDisplayModel(
+    val id: String,
+    val title: String,
+    val description: String,
+    val publishedAt: String,
+    val duration: String,
+    val audioUrl: String,
+    val listened: Boolean,
+)

@@ -78,3 +78,22 @@ The app follows a simple navigation pattern:
 - Configuration file: `detekt-config.yml` with Compose-specific rules
 - HTML and XML reports are generated and uploaded as artifacts
 - Detekt analyzes `commonMain`, `androidMain`, and `iosMain` source sets
+
+## Code Style Guidelines
+
+### Comments and Documentation
+- **TODO comments**: Keep TODO comments in the code as they indicate future improvements and implementation plans
+- TODO comments should be descriptive and provide context about what needs to be implemented
+- Use "TODO:" prefix followed by a clear description of the task
+- Examples of appropriate TODO comments:
+  - `// TODO: Implement actual repository integration when backend is ready`
+  - `// TODO: Add error handling for network failures`
+  - `// TODO: Replace with real authentication logic`
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
+Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
+IMPORTANT: Keep TODO comments in the code. TODO comments are valuable for indicating future improvements and should not be removed during refactoring or cleanup.
