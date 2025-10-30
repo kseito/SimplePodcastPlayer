@@ -8,6 +8,9 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.spotless)
+    // TODO: Re-enable KSP and Room when dependency issues are resolved
+    // alias(libs.plugins.ksp)
+    // alias(libs.plugins.room)
 }
 
 kotlin {
@@ -35,6 +38,9 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.android)
+            implementation(libs.androidx.media3.exoplayer)
+            implementation(libs.androidx.media3.session)
+            implementation(libs.androidx.media3.ui)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -55,6 +61,8 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+            // TODO: Re-enable Room when dependency issues are resolved
+            // implementation(libs.room.runtime)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -102,7 +110,17 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
+    // TODO: Re-enable KSP and Room when dependency issues are resolved
+    // add("kspAndroid", libs.room.compiler)
+    // add("kspIosSimulatorArm64", libs.room.compiler)
+    // add("kspIosX64", libs.room.compiler)
+    // add("kspIosArm64", libs.room.compiler)
 }
+
+// TODO: Re-enable Room when dependency issues are resolved
+// room {
+//     schemaDirectory("$projectDir/schemas")
+// }
 
 spotless {
     kotlin {
