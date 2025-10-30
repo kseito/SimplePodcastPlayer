@@ -2,6 +2,7 @@ package jp.kztproject.simplepodcastplayer.screen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.RssService
@@ -54,9 +55,35 @@ class PodcastDetailViewModel : ViewModel() {
         }
     }
 
-    @Suppress("UnusedParameter")
     fun playEpisode(episodeId: String) {
-        // Future: Implement episode playback logic when PlayerScreen is added
+        val episode = _uiState.value.episodes.find { it.id == episodeId } ?: return
+        val podcast = _uiState.value.podcast ?: return
+
+        // Convert EpisodeDisplayModel to Episode
+        val episodeData = Episode(
+            id = episode.id,
+            podcastId = podcast.trackId.toString(),
+            title = episode.title,
+            description = episode.description,
+            audioUrl = episode.audioUrl,
+            duration = parseDurationToSeconds(episode.duration),
+            publishedAt = episode.publishedAt,
+            listened = episode.listened,
+        )
+
+        navigateToPlayer(episodeData, podcast)
+    }
+
+    private fun parseDurationToSeconds(duration: String): Long {
+        // Duration format is "MM:SS"
+        val parts = duration.split(":")
+        return if (parts.size == 2) {
+            val minutes = parts[0].toLongOrNull() ?: 0
+            val seconds = parts[1].toLongOrNull() ?: 0
+            minutes * 60 + seconds
+        } else {
+            0
+        }
     }
 
     fun clearError() {
