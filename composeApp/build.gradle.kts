@@ -8,9 +8,8 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.spotless)
-    // TODO: Re-enable KSP and Room when dependency issues are resolved
-    // alias(libs.plugins.ksp)
-    // alias(libs.plugins.room)
+     alias(libs.plugins.ksp)
+     alias(libs.plugins.room)
 }
 
 kotlin {
@@ -110,17 +109,15 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
-    // TODO: Re-enable KSP and Room when dependency issues are resolved
-    // add("kspAndroid", libs.room.compiler)
-    // add("kspIosSimulatorArm64", libs.room.compiler)
-    // add("kspIosX64", libs.room.compiler)
-    // add("kspIosArm64", libs.room.compiler)
+     add("kspAndroid", libs.room.compiler)
+     add("kspIosSimulatorArm64", libs.room.compiler)
+     add("kspIosX64", libs.room.compiler)
+     add("kspIosArm64", libs.room.compiler)
 }
 
-// TODO: Re-enable Room when dependency issues are resolved
-// room {
-//     schemaDirectory("$projectDir/schemas")
-// }
+ room {
+     schemaDirectory("$projectDir/schemas")
+ }
 
 spotless {
     kotlin {
