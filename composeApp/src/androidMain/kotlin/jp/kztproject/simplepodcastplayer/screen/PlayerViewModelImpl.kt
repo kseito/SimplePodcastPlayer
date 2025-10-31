@@ -31,6 +31,7 @@ class PlayerViewModelImpl(private val exoPlayer: ExoPlayer, private val context:
 
     private var positionUpdateJob: Job? = null
     private var savePositionJob: Job? = null
+    private var durationCheckJob: Job? = null
 
     init {
         setupPlayerListener()
@@ -139,6 +140,9 @@ class PlayerViewModelImpl(private val exoPlayer: ExoPlayer, private val context:
 
             audioPlayer.loadUrl(audioSource)
 
+            // Start checking for duration availability
+            startDurationCheck()
+
             // Seek to saved position if exists
             if (savedPosition > 0) {
                 audioPlayer.seekTo(savedPosition)
@@ -151,6 +155,7 @@ class PlayerViewModelImpl(private val exoPlayer: ExoPlayer, private val context:
         saveCurrentPosition()
         stopPositionUpdates()
         stopPeriodicSave()
+        stopDurationCheck()
         audioPlayer.release()
     }
 
@@ -215,6 +220,33 @@ class PlayerViewModelImpl(private val exoPlayer: ExoPlayer, private val context:
                 completed = true,
             )
         }
+    }
+
+    private fun startDurationCheck() {
+        durationCheckJob?.cancel()
+        durationCheckJob =
+            viewModelScope.launch {
+                // Check duration periodically until it's available
+                var attempts = 0
+                while (isActive && attempts < 30) { // Try for up to 30 seconds
+                    val duration = audioPlayer.getDuration()
+                    if (duration > 0) {
+                        _uiState.value = _uiState.value.copy(duration = duration, isLoading = false)
+                        break
+                    }
+                    attempts++
+                    delay(1000) // Check every second
+                }
+
+                // If duration is still not available after 30 attempts, stop loading anyway
+                if (_uiState.value.isLoading) {
+                    _uiState.value = _uiState.value.copy(isLoading = false)
+                }
+            }
+    }
+
+    private fun stopDurationCheck() {
+        durationCheckJob?.cancel()
     }
 
     override fun onCleared() {

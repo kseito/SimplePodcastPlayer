@@ -20,6 +20,7 @@ class PlayerViewModelImpl : PlayerViewModel {
     private val audioPlayer = AudioPlayer()
     private val scope = CoroutineScope(Dispatchers.Main)
     private var positionUpdateJob: Job? = null
+    private var durationCheckJob: Job? = null
 
     override fun play() {
         audioPlayer.play()
@@ -62,15 +63,13 @@ class PlayerViewModelImpl : PlayerViewModel {
 
         audioPlayer.loadUrl(episode.audioUrl)
 
-        // Update duration - for now iOS returns 0, so we'll update it later when available
-        _uiState.value = _uiState.value.copy(
-            duration = audioPlayer.getDuration(),
-            isLoading = false,
-        )
+        // Start checking for duration availability
+        startDurationCheck()
     }
 
     override fun release() {
         stopPositionUpdates()
+        stopDurationCheck()
         audioPlayer.release()
     }
 
@@ -92,5 +91,35 @@ class PlayerViewModelImpl : PlayerViewModel {
     private fun stopPositionUpdates() {
         positionUpdateJob?.cancel()
         positionUpdateJob = null
+    }
+
+    private fun startDurationCheck() {
+        durationCheckJob?.cancel()
+        durationCheckJob = scope.launch {
+            // Check duration periodically until it's available
+            var attempts = 0
+            while (isActive && attempts < 30) { // Try for up to 30 seconds
+                val duration = audioPlayer.getDuration()
+                if (duration > 0) {
+                    _uiState.value = _uiState.value.copy(
+                        duration = duration,
+                        isLoading = false,
+                    )
+                    break
+                }
+                attempts++
+                delay(1000) // Check every second
+            }
+
+            // If duration is still not available after 30 attempts, stop loading anyway
+            if (_uiState.value.isLoading) {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+            }
+        }
+    }
+
+    private fun stopDurationCheck() {
+        durationCheckJob?.cancel()
+        durationCheckJob = null
     }
 }

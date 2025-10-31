@@ -8,6 +8,7 @@ import platform.AVFoundation.pause
 import platform.AVFoundation.seekToTime
 import platform.AVFoundation.currentTime
 import platform.AVFoundation.rate
+import platform.AVFoundation.duration
 import platform.Foundation.NSURL
 import platform.CoreMedia.CMTimeMake
 import platform.CoreMedia.CMTimeGetSeconds
@@ -26,7 +27,9 @@ actual class AudioPlayer {
     }
 
     actual fun seekTo(position: Long) {
-        val time = CMTimeMake(value = position, timescale = 1000)
+        // Convert milliseconds to seconds with microsecond precision
+        // position is in milliseconds, so multiply by 1000 to get microseconds
+        val time = CMTimeMake(value = position * 1000, timescale = 1000000)
         avPlayer?.seekToTime(time)
     }
 
@@ -52,9 +55,13 @@ actual class AudioPlayer {
     }
 
     actual fun getDuration(): Long {
-        // TODO: Implement proper duration retrieval
-        // AVPlayerItem duration is not directly accessible in Kotlin/Native
-        return 0L
+        val durationTime = currentPlayerItem?.duration ?: return 0L
+        val seconds = CMTimeGetSeconds(durationTime)
+        // Check if duration is valid (not NaN or infinite)
+        if (seconds.isNaN() || seconds.isInfinite()) {
+            return 0L
+        }
+        return (seconds * 1000).toLong()
     }
 
     actual fun isPlaying(): Boolean = (avPlayer?.rate ?: 0f) > 0f
