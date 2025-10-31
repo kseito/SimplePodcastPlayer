@@ -2,6 +2,9 @@ package jp.kztproject.simplepodcastplayer.screen
 
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
+import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -18,20 +21,26 @@ class PlayerViewModelImpl : PlayerViewModel {
     override val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private val audioPlayer = AudioPlayer()
+    private val playbackRepository = PlaybackRepository()
+    private val downloadRepository = DownloadRepository()
     private val scope = CoroutineScope(Dispatchers.Main)
     private var positionUpdateJob: Job? = null
     private var durationCheckJob: Job? = null
+    private var savePositionJob: Job? = null
 
     override fun play() {
         audioPlayer.play()
         _uiState.value = _uiState.value.copy(isPlaying = true)
         startPositionUpdates()
+        startPeriodicSave()
     }
 
     override fun pause() {
         audioPlayer.pause()
         _uiState.value = _uiState.value.copy(isPlaying = false)
         stopPositionUpdates()
+        stopPeriodicSave()
+        saveCurrentPosition()
     }
 
     override fun seekTo(position: Long) {
@@ -55,20 +64,58 @@ class PlayerViewModelImpl : PlayerViewModel {
     }
 
     override fun loadEpisode(episode: Episode, podcast: Podcast) {
-        _uiState.value = _uiState.value.copy(
-            episode = episode,
-            podcast = podcast,
-            isLoading = true,
-        )
+        _uiState.value =
+            _uiState.value.copy(
+                episode = episode,
+                podcast = podcast,
+                isLoading = true,
+            )
 
-        audioPlayer.loadUrl(episode.audioUrl)
+        // Save episode to database and load playback position
+        scope.launch {
+            // Get existing episode from database to preserve playback position
+            val existingEpisode = playbackRepository.getEpisode(episode.id)
 
-        // Start checking for duration availability
-        startDurationCheck()
+            if (existingEpisode == null) {
+                // New episode - save to database
+                val episodeEntity =
+                    EpisodeEntity(
+                        id = episode.id,
+                        podcastId = episode.podcastId,
+                        title = episode.title,
+                        description = episode.description,
+                        audioUrl = episode.audioUrl,
+                        duration = episode.duration,
+                        publishedAt = episode.publishedAt,
+                        listened = episode.listened,
+                    )
+                playbackRepository.saveEpisode(episodeEntity)
+            }
+
+            // Load saved playback position (will be 0 for new episodes)
+            val savedPosition = playbackRepository.getPlaybackPosition(episode.id)
+
+            // Check if episode is downloaded, use local file if available
+            val audioSource =
+                downloadRepository.getLocalFilePath(episode.id) ?: episode.audioUrl
+
+            audioPlayer.loadUrl(audioSource)
+
+            // Start checking for duration availability
+            startDurationCheck()
+
+            // Seek to saved position if exists
+            if (savedPosition > 0) {
+                audioPlayer.seekTo(savedPosition)
+                _uiState.value = _uiState.value.copy(currentPosition = savedPosition)
+            }
+        }
     }
 
     override fun release() {
+        saveCurrentPosition()
         stopPositionUpdates()
+        stopPeriodicSave()
         stopDurationCheck()
         audioPlayer.release()
     }
@@ -121,5 +168,52 @@ class PlayerViewModelImpl : PlayerViewModel {
     private fun stopDurationCheck() {
         durationCheckJob?.cancel()
         durationCheckJob = null
+    }
+
+    private fun startPeriodicSave() {
+        savePositionJob?.cancel()
+        savePositionJob =
+            scope.launch {
+                while (isActive) {
+                    delay(5000) // Save every 5 seconds
+                    saveCurrentPosition()
+                }
+            }
+    }
+
+    private fun stopPeriodicSave() {
+        savePositionJob?.cancel()
+    }
+
+    private fun saveCurrentPosition() {
+        val episode = _uiState.value.episode ?: return
+        val currentPosition = audioPlayer.getCurrentPosition()
+
+        scope.launch {
+            playbackRepository.savePlaybackPosition(episode.id, currentPosition)
+
+            // Check if episode is 95% complete and mark as listened
+            val duration = _uiState.value.duration
+            if (duration > 0 && currentPosition >= duration * 0.95) {
+                playbackRepository.markAsListened(episode.id)
+            }
+        }
+    }
+
+    private fun handlePlaybackCompleted() {
+        val episode = _uiState.value.episode ?: return
+        val currentPosition = audioPlayer.getCurrentPosition()
+
+        scope.launch {
+            // Mark as listened
+            playbackRepository.markAsListened(episode.id)
+
+            // Record play history
+            playbackRepository.recordPlayHistory(
+                episodeId = episode.id,
+                position = currentPosition,
+                completed = true,
+            )
+        }
     }
 }
