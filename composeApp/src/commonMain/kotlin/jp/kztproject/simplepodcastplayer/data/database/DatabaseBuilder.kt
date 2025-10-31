@@ -6,6 +6,4 @@ expect object DatabaseBuilder {
     fun build(): AppDatabase
 }
 
-fun RoomDatabase.Builder<AppDatabase>.buildDatabase(): AppDatabase = this
-    .fallbackToDestructiveMigration(dropAllTables = true)
-    .build()
+expect fun RoomDatabase.Builder<AppDatabase>.buildDatabase(): AppDatabase

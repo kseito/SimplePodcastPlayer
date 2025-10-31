@@ -4,6 +4,7 @@ import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.database.entity.PlayHistoryEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.Clock
 
 class PlaybackRepository {
     private val database = DatabaseBuilder.build()
@@ -48,7 +49,7 @@ class PlaybackRepository {
         val playHistory =
             PlayHistoryEntity(
                 episodeId = episodeId,
-                playedAt = System.currentTimeMillis(),
+                playedAt = Clock.System.now().toEpochMilliseconds(),
                 position = position,
                 completed = completed,
             )

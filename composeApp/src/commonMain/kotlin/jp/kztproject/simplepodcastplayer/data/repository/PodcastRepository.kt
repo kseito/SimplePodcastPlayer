@@ -6,6 +6,7 @@ import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.datetime.Clock
 
 class PodcastRepository {
     private val database = DatabaseBuilder.build()
@@ -26,7 +27,7 @@ class PodcastRepository {
                 imageUrl = podcast.bestArtworkUrl(),
                 feedUrl = podcast.feedUrl,
                 subscribed = true,
-                subscribedAt = System.currentTimeMillis(),
+                subscribedAt = Clock.System.now().toEpochMilliseconds(),
             )
         podcastDao.insert(podcastEntity)
 

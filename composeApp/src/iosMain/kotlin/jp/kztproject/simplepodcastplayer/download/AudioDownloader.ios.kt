@@ -2,22 +2,22 @@ package jp.kztproject.simplepodcastplayer.download
 
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
-import io.ktor.client.statement.HttpResponse
-import io.ktor.client.statement.bodyAsChannel
-import io.ktor.http.contentLength
-import io.ktor.utils.io.readAvailable
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.IO
+import io.ktor.client.statement.bodyAsBytes
+import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.withContext
+import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
+import platform.Foundation.create
 
 actual class AudioDownloader {
     private val httpClient = HttpClient()
 
+    @OptIn(ExperimentalForeignApi::class)
     private fun getDownloadDirectory(): String {
         val documentDirectory =
             NSFileManager.defaultManager.URLForDirectory(
@@ -43,6 +43,7 @@ actual class AudioDownloader {
         return downloadsPath
     }
 
+    @OptIn(ExperimentalForeignApi::class)
     actual suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = flow {
         emit(DownloadState.Downloading(0f))
 
@@ -51,37 +52,23 @@ actual class AudioDownloader {
             val fileName = episodeId.replace(Regex("[^a-zA-Z0-9]"), "_") + ".mp3"
             val filePath = "$downloadDir/$fileName"
 
-            withContext(Dispatchers.IO) {
-                val response: HttpResponse = httpClient.get(url)
-                val channel = response.bodyAsChannel()
-                val contentLength = response.contentLength() ?: 0L
-                var totalBytesRead = 0L
+            // Download the file to memory
+            val bytes = httpClient.get(url).bodyAsBytes()
 
-                platform.Foundation.NSOutputStream.outputStreamToFileAtPath(filePath, append = false)
-                    ?.let { output ->
-                        output.open()
+            emit(DownloadState.Downloading(0.5f))
 
-                        try {
-                            val buffer = ByteArray(8192)
-                            while (true) {
-                                val bytesRead = channel.readAvailable(buffer)
-                                if (bytesRead == -1) break
-
-                                buffer.usePinned { pinned ->
-                                    output.write(pinned.addressOf(0), bytesRead.toULong())
-                                }
-
-                                totalBytesRead += bytesRead
-
-                                if (contentLength > 0) {
-                                    val progress = totalBytesRead.toFloat() / contentLength.toFloat()
-                                    emit(DownloadState.Downloading(progress))
-                                }
-                            }
-                        } finally {
-                            output.close()
-                        }
-                    }
+            // Write bytes to file using NSFileManager
+            bytes.usePinned { pinned ->
+                val data = NSData.create(bytes = pinned.addressOf(0), length = bytes.size.toULong())
+                if (data != null) {
+                    NSFileManager.defaultManager.createFileAtPath(
+                        path = filePath,
+                        contents = data,
+                        attributes = null,
+                    )
+                } else {
+                    throw Exception("Failed to create NSData")
+                }
             }
 
             emit(DownloadState.Completed)
@@ -102,11 +89,10 @@ actual class AudioDownloader {
         }
     }
 
-    actual suspend fun deleteDownload(episodeId: String): Boolean = withContext(Dispatchers.IO) {
-        getLocalFilePath(episodeId)?.let { filePath ->
-            NSFileManager.defaultManager.removeItemAtPath(filePath, null)
-        } ?: false
-    }
+    @OptIn(ExperimentalForeignApi::class)
+    actual suspend fun deleteDownload(episodeId: String): Boolean = getLocalFilePath(episodeId)?.let { filePath ->
+        NSFileManager.defaultManager.removeItemAtPath(filePath, null)
+    } ?: false
 
     actual fun isDownloaded(episodeId: String): Boolean = getLocalFilePath(episodeId) != null
 }

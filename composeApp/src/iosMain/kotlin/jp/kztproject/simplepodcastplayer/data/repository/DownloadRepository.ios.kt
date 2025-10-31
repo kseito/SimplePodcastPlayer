@@ -5,6 +5,7 @@ import jp.kztproject.simplepodcastplayer.download.AudioDownloader
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
+import kotlinx.datetime.Clock
 
 actual class DownloadRepository {
     private val audioDownloader = AudioDownloader()
@@ -19,7 +20,7 @@ actual class DownloadRepository {
                     episodeId = episodeId,
                     isDownloaded = true,
                     localFilePath = localFilePath,
-                    downloadedAt = System.currentTimeMillis(),
+                    downloadedAt = Clock.System.now().toEpochMilliseconds(),
                 )
             }
         }

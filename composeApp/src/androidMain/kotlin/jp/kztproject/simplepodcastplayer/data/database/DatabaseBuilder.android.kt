@@ -2,6 +2,9 @@ package jp.kztproject.simplepodcastplayer.data.database
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.RoomDatabase
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import kotlinx.coroutines.Dispatchers
 
 actual object DatabaseBuilder {
     private lateinit var context: Context
@@ -20,3 +23,9 @@ actual object DatabaseBuilder {
             .also { database = it }
     }
 }
+
+actual fun RoomDatabase.Builder<AppDatabase>.buildDatabase(): AppDatabase = this
+    .setDriver(BundledSQLiteDriver())
+    .setQueryCoroutineContext(Dispatchers.IO)
+    .fallbackToDestructiveMigration(dropAllTables = true)
+    .build()
