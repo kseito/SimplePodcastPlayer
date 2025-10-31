@@ -7,10 +7,13 @@ import androidx.compose.runtime.remember
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.screen.PlayerScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastDetailScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastListScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastSearchScreen
+import jp.kztproject.simplepodcastplayer.screen.rememberPlayerViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -20,6 +23,8 @@ fun App() {
         val navController = rememberNavController()
         val selectedPodcast = remember { mutableStateOf<Podcast?>(null) }
         val selectedPodcastId = remember { mutableStateOf<Long?>(null) }
+        val selectedEpisode = remember { mutableStateOf<Episode?>(null) }
+        val selectedEpisodePodcast = remember { mutableStateOf<Podcast?>(null) }
 
         NavHost(navController = navController, startDestination = "list") {
             composable("list") {
@@ -45,6 +50,11 @@ fun App() {
                     PodcastDetailScreen(
                         podcast = podcast,
                         onNavigateBack = { navController.popBackStack() },
+                        onNavigateToPlayer = { episode, podcastData ->
+                            selectedEpisode.value = episode
+                            selectedEpisodePodcast.value = podcastData
+                            navController.navigate("player")
+                        },
                     )
                 }
             }
@@ -62,6 +72,22 @@ fun App() {
                     listViewModel.getPodcastById(podcastId)?.let { podcast ->
                         PodcastDetailScreen(
                             podcast = podcast,
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToPlayer = { episode, podcastData ->
+                                selectedEpisode.value = episode
+                                selectedEpisodePodcast.value = podcastData
+                                navController.navigate("player")
+                            },
+                        )
+                    }
+                }
+            }
+            composable("player") {
+                selectedEpisode.value?.let { episode ->
+                    selectedEpisodePodcast.value?.let { podcast ->
+                        val viewModel = rememberPlayerViewModel(episode, podcast)
+                        PlayerScreen(
+                            viewModel = viewModel,
                             onNavigateBack = { navController.popBackStack() },
                         )
                     }

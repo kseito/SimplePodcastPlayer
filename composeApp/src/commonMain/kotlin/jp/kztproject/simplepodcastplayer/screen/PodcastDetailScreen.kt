@@ -47,7 +47,8 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun PodcastDetailScreen(
     podcast: Podcast,
     onNavigateBack: () -> Unit,
-    viewModel: PodcastDetailViewModel = viewModel { PodcastDetailViewModel() },
+    onNavigateToPlayer: (jp.kztproject.simplepodcastplayer.data.Episode, Podcast) -> Unit,
+    viewModel: PodcastDetailViewModel = viewModel { PodcastDetailViewModel(onNavigateToPlayer) },
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -321,6 +322,7 @@ fun PodcastDetailScreenPreview() {
         PodcastDetailScreen(
             podcast = samplePodcast,
             onNavigateBack = {},
+            onNavigateToPlayer = { _, _ -> },
         )
     }
 }

@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class PodcastDetailViewModel : ViewModel() {
+class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> }) : ViewModel() {
     private val _uiState = MutableStateFlow(PodcastDetailUiState())
     val uiState: StateFlow<PodcastDetailUiState> = _uiState.asStateFlow()
 
@@ -79,7 +79,7 @@ class PodcastDetailViewModel : ViewModel() {
             listened = episode.listened,
         )
 
-        navigateToPlayer(episodeData, podcast)
+        onNavigateToPlayer(episodeData, podcast)
     }
 
     private fun parseDurationToSeconds(duration: String): Long {

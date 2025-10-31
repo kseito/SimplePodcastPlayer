@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -179,7 +180,7 @@ fun PlayerScreen(viewModel: PlayerViewModel, onNavigateBack: () -> Unit) {
                             )
                         } else {
                             Icon(
-                                Icons.Default.PlayArrow,
+                                if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (uiState.isPlaying) "Pause" else "Play",
                                 modifier = Modifier.size(48.dp),
                             )
@@ -204,5 +205,5 @@ private fun formatTime(milliseconds: Long): String {
     val totalSeconds = milliseconds / 1000
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
-    return String.format("%d:%02d", minutes, seconds)
+    return "$minutes:${seconds.toString().padStart(2, '0')}"
 }

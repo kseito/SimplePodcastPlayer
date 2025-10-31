@@ -1,6 +1,8 @@
 package jp.kztproject.simplepodcastplayer.screen
 
+import androidx.compose.runtime.Composable
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 
-expect fun navigateToPlayer(episode: Episode, podcast: Podcast)
+@Composable
+expect fun rememberPlayerViewModel(episode: Episode, podcast: Podcast): PlayerViewModel
