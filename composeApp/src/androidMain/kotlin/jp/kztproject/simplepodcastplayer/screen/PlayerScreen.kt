@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,10 +38,7 @@ import coil3.compose.AsyncImage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PlayerScreen(
-    viewModel: PlayerViewModel,
-    onNavigateBack: () -> Unit,
-) {
+fun PlayerScreen(viewModel: PlayerViewModel, onNavigateBack: () -> Unit) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -59,10 +55,10 @@ fun PlayerScreen(
     ) { paddingValues ->
         Column(
             modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(horizontal = 24.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -73,9 +69,9 @@ fun PlayerScreen(
                 model = uiState.podcast?.bestArtworkUrl(),
                 contentDescription = "Episode artwork",
                 modifier =
-                    Modifier
-                        .size(300.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                Modifier
+                    .size(300.dp)
+                    .clip(RoundedCornerShape(8.dp)),
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -172,9 +168,9 @@ fun PlayerScreen(
                         },
                         modifier = Modifier.size(80.dp),
                         colors =
-                            IconButtonDefaults.filledIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                            ),
+                        IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                        ),
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(

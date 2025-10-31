@@ -59,12 +59,9 @@ class PlaybackService : MediaSessionService() {
                 .build()
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
-        return mediaSession
-    }
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
-    override fun onBind(intent: Intent?) =
-        super.onBind(intent) ?: binder
+    override fun onBind(intent: Intent?) = super.onBind(intent) ?: binder
 
     override fun onDestroy() {
         mediaSession?.run {

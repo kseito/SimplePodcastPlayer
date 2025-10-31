@@ -1,11 +1,15 @@
 package jp.kztproject.simplepodcastplayer.screen
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
+import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -15,11 +19,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-class PlayerViewModelImpl(
-    private val exoPlayer: ExoPlayer,
-) : ViewModel(),
+class PlayerViewModelImpl(private val exoPlayer: ExoPlayer, private val context: Context) :
+    ViewModel(),
     PlayerViewModel {
     private val audioPlayer = AudioPlayer(exoPlayer)
+    private val playbackRepository = PlaybackRepository()
+    private val downloadRepository = DownloadRepository(context)
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     override val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
@@ -96,10 +101,7 @@ class PlayerViewModelImpl(
         _uiState.value = _uiState.value.copy(playbackSpeed = speed)
     }
 
-    override fun loadEpisode(
-        episode: Episode,
-        podcast: Podcast,
-    ) {
+    override fun loadEpisode(episode: Episode, podcast: Podcast) {
         _uiState.value =
             _uiState.value.copy(
                 episode = episode,
@@ -107,9 +109,42 @@ class PlayerViewModelImpl(
                 isLoading = true,
             )
 
-        audioPlayer.loadUrl(episode.audioUrl)
+        // Save episode to database and load playback position
+        viewModelScope.launch {
+            // Get existing episode from database to preserve playback position
+            val existingEpisode = playbackRepository.getEpisode(episode.id)
 
-        // TODO: Load saved playback position from database when Room is re-enabled
+            if (existingEpisode == null) {
+                // New episode - save to database
+                val episodeEntity =
+                    EpisodeEntity(
+                        id = episode.id,
+                        podcastId = episode.podcastId,
+                        title = episode.title,
+                        description = episode.description,
+                        audioUrl = episode.audioUrl,
+                        duration = episode.duration,
+                        publishedAt = episode.publishedAt,
+                        listened = episode.listened,
+                    )
+                playbackRepository.saveEpisode(episodeEntity)
+            }
+
+            // Load saved playback position (will be 0 for new episodes)
+            val savedPosition = playbackRepository.getPlaybackPosition(episode.id)
+
+            // Check if episode is downloaded, use local file if available
+            val audioSource =
+                downloadRepository.getLocalFilePath(episode.id) ?: episode.audioUrl
+
+            audioPlayer.loadUrl(audioSource)
+
+            // Seek to saved position if exists
+            if (savedPosition > 0) {
+                audioPlayer.seekTo(savedPosition)
+                _uiState.value = _uiState.value.copy(currentPosition = savedPosition)
+            }
+        }
     }
 
     override fun release() {
@@ -151,11 +186,35 @@ class PlayerViewModelImpl(
     }
 
     private fun saveCurrentPosition() {
-        // TODO: Save playback position to database when Room is re-enabled
+        val episode = _uiState.value.episode ?: return
+        val currentPosition = audioPlayer.getCurrentPosition()
+
+        viewModelScope.launch {
+            playbackRepository.savePlaybackPosition(episode.id, currentPosition)
+
+            // Check if episode is 95% complete and mark as listened
+            val duration = _uiState.value.duration
+            if (duration > 0 && currentPosition >= duration * 0.95) {
+                playbackRepository.markAsListened(episode.id)
+            }
+        }
     }
 
     private fun handlePlaybackCompleted() {
-        // TODO: Record playback history to database when Room is re-enabled
+        val episode = _uiState.value.episode ?: return
+        val currentPosition = audioPlayer.getCurrentPosition()
+
+        viewModelScope.launch {
+            // Mark as listened
+            playbackRepository.markAsListened(episode.id)
+
+            // Record play history
+            playbackRepository.recordPlayHistory(
+                episodeId = episode.id,
+                position = currentPosition,
+                completed = true,
+            )
+        }
     }
 
     override fun onCleared() {

@@ -2,12 +2,9 @@ package jp.kztproject.simplepodcastplayer.player
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
-import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 
-actual class AudioPlayer(
-    private val player: ExoPlayer,
-) {
+actual class AudioPlayer(private val player: ExoPlayer) {
     actual fun play() {
         player.play()
     }
@@ -34,15 +31,9 @@ actual class AudioPlayer(
         player.release()
     }
 
-    actual fun getCurrentPosition(): Long {
-        return player.currentPosition
-    }
+    actual fun getCurrentPosition(): Long = player.currentPosition
 
-    actual fun getDuration(): Long {
-        return if (player.duration == androidx.media3.common.C.TIME_UNSET) 0L else player.duration
-    }
+    actual fun getDuration(): Long = if (player.duration == androidx.media3.common.C.TIME_UNSET) 0L else player.duration
 
-    actual fun isPlaying(): Boolean {
-        return player.isPlaying
-    }
+    actual fun isPlaying(): Boolean = player.isPlaying
 }

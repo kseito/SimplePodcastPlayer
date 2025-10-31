@@ -1,0 +1,22 @@
+package jp.kztproject.simplepodcastplayer.data.database
+
+import android.content.Context
+import androidx.room.Room
+
+actual object DatabaseBuilder {
+    private lateinit var context: Context
+    private var database: AppDatabase? = null
+
+    fun init(context: Context) {
+        this.context = context.applicationContext
+    }
+
+    actual fun build(): AppDatabase = database ?: synchronized(this) {
+        database ?: Room
+            .databaseBuilder<AppDatabase>(
+                context = context,
+                name = "simplepodcastplayer.db",
+            ).buildDatabase()
+            .also { database = it }
+    }
+}

@@ -19,10 +19,7 @@ interface PlayerViewModel {
 
     fun setPlaybackSpeed(speed: Float)
 
-    fun loadEpisode(
-        episode: Episode,
-        podcast: Podcast,
-    )
+    fun loadEpisode(episode: Episode, podcast: Podcast)
 
     fun release()
 }

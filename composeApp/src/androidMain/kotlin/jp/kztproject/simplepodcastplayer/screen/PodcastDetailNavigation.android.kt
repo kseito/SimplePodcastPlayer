@@ -11,10 +11,7 @@ object PlayerNavigator {
     var currentContext: android.content.Context? = null
 }
 
-actual fun navigateToPlayer(
-    episode: Episode,
-    podcast: Podcast,
-) {
+actual fun navigateToPlayer(episode: Episode, podcast: Podcast) {
     val context = PlayerNavigator.currentContext ?: return
     val intent = PlayerActivity.createIntent(context, episode, podcast)
     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

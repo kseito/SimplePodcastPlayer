@@ -28,15 +28,12 @@ class PlayerActivity : ComponentActivity() {
 
     private val serviceConnection =
         object : ServiceConnection {
-            override fun onServiceConnected(
-                name: ComponentName?,
-                service: IBinder?,
-            ) {
+            override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
                 val binder = service as? PlaybackService.PlaybackBinder
                 playbackService = binder?.getService()
                 isBound = true
 
-                binder?.getService()?.let { setupViewModel(it.getPlayer() as ExoPlayer) }
+                binder?.getService()?.let { setupViewModel(it.getPlayer() as ExoPlayer, this@PlayerActivity) }
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
@@ -65,7 +62,7 @@ class PlayerActivity : ComponentActivity() {
         bindService(serviceIntent, serviceConnection, Context.BIND_AUTO_CREATE)
     }
 
-    private fun setupViewModel(exoPlayer: ExoPlayer) {
+    private fun setupViewModel(exoPlayer: ExoPlayer, context: Context) {
         // Get Episode and Podcast from intent
         val episodeJson = intent.getStringExtra(EXTRA_EPISODE)
         val podcastJson = intent.getStringExtra(EXTRA_PODCAST)
@@ -74,8 +71,7 @@ class PlayerActivity : ComponentActivity() {
             val episode = Json.decodeFromString<Episode>(episodeJson)
             val podcast = Json.decodeFromString<Podcast>(podcastJson)
 
-            // TODO: Re-enable database integration when Room is working
-            viewModel = PlayerViewModelImpl(exoPlayer)
+            viewModel = PlayerViewModelImpl(exoPlayer, context)
             viewModel?.loadEpisode(episode, podcast)
         }
     }
@@ -92,15 +88,10 @@ class PlayerActivity : ComponentActivity() {
         private const val EXTRA_EPISODE = "extra_episode"
         private const val EXTRA_PODCAST = "extra_podcast"
 
-        fun createIntent(
-            context: Context,
-            episode: Episode,
-            podcast: Podcast,
-        ): Intent {
-            return Intent(context, PlayerActivity::class.java).apply {
+        fun createIntent(context: Context, episode: Episode, podcast: Podcast): Intent =
+            Intent(context, PlayerActivity::class.java).apply {
                 putExtra(EXTRA_EPISODE, Json.encodeToString(episode))
                 putExtra(EXTRA_PODCAST, Json.encodeToString(podcast))
             }
-        }
     }
 }

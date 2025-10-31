@@ -8,8 +8,8 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.spotless)
-     alias(libs.plugins.ksp)
-     alias(libs.plugins.room)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 kotlin {
@@ -60,8 +60,7 @@ kotlin {
             implementation(libs.kotlinx.serialization.json)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
-            // TODO: Re-enable Room when dependency issues are resolved
-            // implementation(libs.room.runtime)
+            implementation(libs.room.runtime)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -109,15 +108,15 @@ android {
 
 dependencies {
     debugImplementation(compose.uiTooling)
-     add("kspAndroid", libs.room.compiler)
-     add("kspIosSimulatorArm64", libs.room.compiler)
-     add("kspIosX64", libs.room.compiler)
-     add("kspIosArm64", libs.room.compiler)
+    add("kspAndroid", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
+    add("kspIosX64", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
 }
 
- room {
-     schemaDirectory("$projectDir/schemas")
- }
+room {
+    schemaDirectory("$projectDir/schemas")
+}
 
 spotless {
     kotlin {

@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
+import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
 import jp.kztproject.simplepodcastplayer.screen.PlayerNavigator
 
 class MainActivity : ComponentActivity() {
@@ -13,8 +14,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        // TODO: Re-enable database initialization when Room is working
-        // DatabaseBuilder.initialize(this)
+        // Initialize database
+        DatabaseBuilder.init(this)
 
         // Set context for navigation
         PlayerNavigator.currentContext = this
