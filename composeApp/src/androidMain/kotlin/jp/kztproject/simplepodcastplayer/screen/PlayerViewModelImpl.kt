@@ -5,249 +5,91 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import jp.kztproject.simplepodcastplayer.data.Episode
-import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope
 
-class PlayerViewModelImpl(private val exoPlayer: ExoPlayer, private val context: Context) :
+class PlayerViewModelImpl(exoPlayer: ExoPlayer, context: Context) :
     ViewModel(),
     PlayerViewModel {
-    private val audioPlayer = AudioPlayer(exoPlayer)
-    private val playbackRepository = PlaybackRepository()
-    private val downloadRepository = DownloadRepository(context)
+    private val delegate =
+        object : BasePlayerViewModel() {
+            override val audioPlayer = AudioPlayer(exoPlayer)
+            override val playbackRepository = PlaybackRepository()
+            override val downloadRepository = DownloadRepository(context)
+            override val coroutineScope: CoroutineScope = viewModelScope
 
-    private val _uiState = MutableStateFlow(PlayerUiState())
-    override val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+            override fun play() {
+                audioPlayer.play()
+            }
 
-    private var positionUpdateJob: Job? = null
-    private var savePositionJob: Job? = null
-    private var durationCheckJob: Job? = null
+            override fun pause() {
+                audioPlayer.pause()
+            }
+        }
+
+    override val uiState = delegate.uiState
 
     init {
-        setupPlayerListener()
+        setupPlayerListener(exoPlayer)
     }
 
-    private fun setupPlayerListener() {
+    private fun setupPlayerListener(exoPlayer: ExoPlayer) {
         exoPlayer.addListener(
             object : Player.Listener {
                 override fun onPlaybackStateChanged(playbackState: Int) {
-                    _uiState.value =
-                        _uiState.value.copy(
+                    delegate._uiState.value =
+                        delegate._uiState.value.copy(
                             isLoading = playbackState == Player.STATE_BUFFERING,
                         )
 
                     if (playbackState == Player.STATE_READY) {
-                        _uiState.value =
-                            _uiState.value.copy(
-                                duration = audioPlayer.getDuration(),
+                        delegate._uiState.value =
+                            delegate._uiState.value.copy(
+                                duration = delegate.audioPlayer.getDuration(),
                             )
                     }
 
                     if (playbackState == Player.STATE_ENDED) {
-                        handlePlaybackCompleted()
+                        delegate.handlePlaybackCompleted()
                     }
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
-                    _uiState.value = _uiState.value.copy(isPlaying = isPlaying)
+                    delegate._uiState.value = delegate._uiState.value.copy(isPlaying = isPlaying)
 
                     if (isPlaying) {
-                        startPositionUpdates()
-                        startPeriodicSave()
+                        delegate.startPositionUpdates()
+                        delegate.startPeriodicSave()
                     } else {
-                        stopPositionUpdates()
-                        stopPeriodicSave()
-                        saveCurrentPosition()
+                        delegate.stopPositionUpdates()
+                        delegate.stopPeriodicSave()
+                        delegate.saveCurrentPosition()
                     }
                 }
             },
         )
     }
 
-    override fun play() {
-        audioPlayer.play()
-    }
+    override fun play() = delegate.play()
 
-    override fun pause() {
-        audioPlayer.pause()
-    }
+    override fun pause() = delegate.pause()
 
-    override fun seekTo(position: Long) {
-        audioPlayer.seekTo(position)
-        _uiState.value = _uiState.value.copy(currentPosition = position)
-    }
+    override fun seekTo(position: Long) = delegate.seekTo(position)
 
-    override fun skipForward(seconds: Int) {
-        val newPosition = (audioPlayer.getCurrentPosition() + seconds * 1000).coerceAtMost(_uiState.value.duration)
-        seekTo(newPosition)
-    }
+    override fun skipForward(seconds: Int) = delegate.skipForward(seconds)
 
-    override fun skipBackward(seconds: Int) {
-        val newPosition = (audioPlayer.getCurrentPosition() - seconds * 1000).coerceAtLeast(0)
-        seekTo(newPosition)
-    }
+    override fun skipBackward(seconds: Int) = delegate.skipBackward(seconds)
 
-    override fun setPlaybackSpeed(speed: Float) {
-        audioPlayer.setPlaybackSpeed(speed)
-        _uiState.value = _uiState.value.copy(playbackSpeed = speed)
-    }
+    override fun setPlaybackSpeed(speed: Float) = delegate.setPlaybackSpeed(speed)
 
-    override fun loadEpisode(episode: Episode, podcast: Podcast) {
-        _uiState.value =
-            _uiState.value.copy(
-                episode = episode,
-                podcast = podcast,
-                isLoading = true,
-            )
+    override fun loadEpisode(
+        episode: jp.kztproject.simplepodcastplayer.data.Episode,
+        podcast: jp.kztproject.simplepodcastplayer.data.Podcast,
+    ) = delegate.loadEpisode(episode, podcast)
 
-        // Save episode to database and load playback position
-        viewModelScope.launch {
-            // Get existing episode from database to preserve playback position
-            val existingEpisode = playbackRepository.getEpisode(episode.id)
-
-            if (existingEpisode == null) {
-                // New episode - save to database
-                val episodeEntity =
-                    EpisodeEntity(
-                        id = episode.id,
-                        podcastId = episode.podcastId,
-                        title = episode.title,
-                        description = episode.description,
-                        audioUrl = episode.audioUrl,
-                        duration = episode.duration,
-                        publishedAt = episode.publishedAt,
-                        listened = episode.listened,
-                    )
-                playbackRepository.saveEpisode(episodeEntity)
-            }
-
-            // Load saved playback position (will be 0 for new episodes)
-            val savedPosition = playbackRepository.getPlaybackPosition(episode.id)
-
-            // Check if episode is downloaded, use local file if available
-            val audioSource =
-                downloadRepository.getLocalFilePath(episode.id) ?: episode.audioUrl
-
-            audioPlayer.loadUrl(audioSource)
-
-            // Start checking for duration availability
-            startDurationCheck()
-
-            // Seek to saved position if exists
-            if (savedPosition > 0) {
-                audioPlayer.seekTo(savedPosition)
-                _uiState.value = _uiState.value.copy(currentPosition = savedPosition)
-            }
-        }
-    }
-
-    override fun release() {
-        saveCurrentPosition()
-        stopPositionUpdates()
-        stopPeriodicSave()
-        stopDurationCheck()
-        audioPlayer.release()
-    }
-
-    private fun startPositionUpdates() {
-        positionUpdateJob?.cancel()
-        positionUpdateJob =
-            viewModelScope.launch {
-                while (isActive) {
-                    val currentPosition = audioPlayer.getCurrentPosition()
-                    _uiState.value = _uiState.value.copy(currentPosition = currentPosition)
-                    delay(500)
-                }
-            }
-    }
-
-    private fun stopPositionUpdates() {
-        positionUpdateJob?.cancel()
-    }
-
-    private fun startPeriodicSave() {
-        savePositionJob?.cancel()
-        savePositionJob =
-            viewModelScope.launch {
-                while (isActive) {
-                    delay(5000) // Save every 5 seconds
-                    saveCurrentPosition()
-                }
-            }
-    }
-
-    private fun stopPeriodicSave() {
-        savePositionJob?.cancel()
-    }
-
-    private fun saveCurrentPosition() {
-        val episode = _uiState.value.episode ?: return
-        val currentPosition = audioPlayer.getCurrentPosition()
-
-        viewModelScope.launch {
-            playbackRepository.savePlaybackPosition(episode.id, currentPosition)
-
-            // Check if episode is 95% complete and mark as listened
-            val duration = _uiState.value.duration
-            if (duration > 0 && currentPosition >= duration * 0.95) {
-                playbackRepository.markAsListened(episode.id)
-            }
-        }
-    }
-
-    private fun handlePlaybackCompleted() {
-        val episode = _uiState.value.episode ?: return
-        val currentPosition = audioPlayer.getCurrentPosition()
-
-        viewModelScope.launch {
-            // Mark as listened
-            playbackRepository.markAsListened(episode.id)
-
-            // Record play history
-            playbackRepository.recordPlayHistory(
-                episodeId = episode.id,
-                position = currentPosition,
-                completed = true,
-            )
-        }
-    }
-
-    private fun startDurationCheck() {
-        durationCheckJob?.cancel()
-        durationCheckJob =
-            viewModelScope.launch {
-                // Check duration periodically until it's available
-                var attempts = 0
-                while (isActive && attempts < 30) { // Try for up to 30 seconds
-                    val duration = audioPlayer.getDuration()
-                    if (duration > 0) {
-                        _uiState.value = _uiState.value.copy(duration = duration, isLoading = false)
-                        break
-                    }
-                    attempts++
-                    delay(1000) // Check every second
-                }
-
-                // If duration is still not available after 30 attempts, stop loading anyway
-                if (_uiState.value.isLoading) {
-                    _uiState.value = _uiState.value.copy(isLoading = false)
-                }
-            }
-    }
-
-    private fun stopDurationCheck() {
-        durationCheckJob?.cancel()
-    }
+    override fun release() = delegate.release()
 
     override fun onCleared() {
         super.onCleared()
