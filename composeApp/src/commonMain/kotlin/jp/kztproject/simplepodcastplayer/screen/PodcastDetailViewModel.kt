@@ -6,6 +6,7 @@ import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.RssService
+import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
 import jp.kztproject.simplepodcastplayer.util.toDisplayModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +18,8 @@ class PodcastDetailViewModel : ViewModel() {
     val uiState: StateFlow<PodcastDetailUiState> = _uiState.asStateFlow()
 
     private val rssService = RssService()
+    private val podcastRepository = PodcastRepository()
+    private var loadedEpisodes: List<Episode> = emptyList()
 
     fun initialize(podcast: Podcast) {
         _uiState.value = _uiState.value.copy(
@@ -29,6 +32,7 @@ class PodcastDetailViewModel : ViewModel() {
 
     fun toggleSubscription() {
         val currentState = _uiState.value
+        val podcast = currentState.podcast ?: return
         val newSubscriptionStatus = !currentState.isSubscribed
 
         _uiState.value = currentState.copy(
@@ -38,9 +42,13 @@ class PodcastDetailViewModel : ViewModel() {
 
         viewModelScope.launch {
             try {
-                // Simulate subscription operation
-                // Future: Implement actual subscription logic with repository
-                kotlinx.coroutines.delay(SUBSCRIPTION_DELAY_MS)
+                if (newSubscriptionStatus) {
+                    // Subscribe: Save podcast and episodes to database
+                    podcastRepository.subscribeToPodcast(podcast, loadedEpisodes)
+                } else {
+                    // Unsubscribe: Update subscription status
+                    podcastRepository.unsubscribeFromPodcast(podcast.trackId)
+                }
 
                 _uiState.value = _uiState.value.copy(
                     isSubscriptionLoading = false,
@@ -102,7 +110,22 @@ class PodcastDetailViewModel : ViewModel() {
                     // Fetch real episodes from RSS feed
                     val result = rssService.fetchEpisodes(podcast.feedUrl)
                     if (result.isSuccess) {
-                        result.getOrNull()?.map { it.toDisplayModel() } ?: emptyList()
+                        val parsedEpisodes = result.getOrNull() ?: emptyList()
+                        // Store loaded episodes for subscription
+                        loadedEpisodes =
+                            parsedEpisodes.map { parsedEpisode ->
+                                Episode(
+                                    id = parsedEpisode.id,
+                                    podcastId = podcast.trackId.toString(),
+                                    title = parsedEpisode.title,
+                                    description = parsedEpisode.description,
+                                    audioUrl = parsedEpisode.audioUrl,
+                                    duration = parsedEpisode.duration,
+                                    publishedAt = parsedEpisode.publishedAt,
+                                    listened = false,
+                                )
+                            }
+                        parsedEpisodes.map { it.toDisplayModel() }
                     } else {
                         val error = result.exceptionOrNull()
                         _uiState.value = _uiState.value.copy(
@@ -125,13 +148,11 @@ class PodcastDetailViewModel : ViewModel() {
         }
     }
 
-    @Suppress("UnusedParameter")
     private fun checkSubscriptionStatus(podcast: Podcast) {
         viewModelScope.launch {
             try {
-                // Default to not subscribed for demonstration
-                // Future: Check actual subscription status from repository
-                val isSubscribed = false
+                // Check subscription status from database
+                val isSubscribed = podcastRepository.isSubscribed(podcast.trackId)
 
                 _uiState.value = _uiState.value.copy(
                     isSubscribed = isSubscribed,

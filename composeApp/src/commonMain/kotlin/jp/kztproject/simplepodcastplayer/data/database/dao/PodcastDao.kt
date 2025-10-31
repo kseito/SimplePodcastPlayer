@@ -15,7 +15,7 @@ interface PodcastDao {
     @Query("DELETE FROM podcasts WHERE id = :podcastId")
     suspend fun delete(podcastId: Long)
 
-    @Query("SELECT * FROM podcasts ORDER BY subscribedAt DESC")
+    @Query("SELECT * FROM podcasts WHERE subscribed = 1 ORDER BY subscribedAt DESC")
     fun getAll(): Flow<List<PodcastEntity>>
 
     @Query("SELECT * FROM podcasts WHERE id = :podcastId")

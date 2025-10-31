@@ -19,10 +19,17 @@ fun App() {
     MaterialTheme {
         val navController = rememberNavController()
         val selectedPodcast = remember { mutableStateOf<Podcast?>(null) }
+        val selectedPodcastId = remember { mutableStateOf<Long?>(null) }
 
         NavHost(navController = navController, startDestination = "list") {
             composable("list") {
-                PodcastListScreen(onNavigateToSearch = { navController.navigate("search") })
+                PodcastListScreen(
+                    onNavigateToSearch = { navController.navigate("search") },
+                    onPodcastClick = { podcastId ->
+                        selectedPodcastId.value = podcastId
+                        navController.navigate("list_detail")
+                    },
+                )
             }
             composable("search") {
                 PodcastSearchScreen(
@@ -39,6 +46,25 @@ fun App() {
                         podcast = podcast,
                         onNavigateBack = { navController.popBackStack() },
                     )
+                }
+            }
+            composable("list_detail") {
+                // This screen is accessed from PodcastListScreen
+                // We need to get the podcast from the database using selectedPodcastId
+                selectedPodcastId.value?.let { podcastId ->
+                    // Create a temporary view model to get the podcast
+                    val listViewModel =
+                        androidx.lifecycle.viewmodel.compose.viewModel<
+                            jp.kztproject.simplepodcastplayer.screen.PodcastListViewModel,
+                            > {
+                            jp.kztproject.simplepodcastplayer.screen.PodcastListViewModel()
+                        }
+                    listViewModel.getPodcastById(podcastId)?.let { podcast ->
+                        PodcastDetailScreen(
+                            podcast = podcast,
+                            onNavigateBack = { navController.popBackStack() },
+                        )
+                    }
                 }
             }
         }
