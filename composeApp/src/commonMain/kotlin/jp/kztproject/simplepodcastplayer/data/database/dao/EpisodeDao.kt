@@ -29,7 +29,13 @@ interface EpisodeDao {
     suspend fun updatePlaybackPosition(episodeId: String, position: Long)
 
     @Query(
-        "UPDATE episodes SET isDownloaded = :isDownloaded, localFilePath = :localFilePath, downloadedAt = :downloadedAt WHERE id = :episodeId",
+        """
+        UPDATE episodes
+        SET isDownloaded = :isDownloaded,
+            localFilePath = :localFilePath,
+            downloadedAt = :downloadedAt
+        WHERE id = :episodeId
+        """,
     )
     suspend fun updateDownloadStatus(
         episodeId: String,
