@@ -16,6 +16,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 abstract class BasePlayerViewModel : PlayerViewModel {
+    @Suppress("ktlint:standard:backing-property-naming")
     internal val _uiState = MutableStateFlow(PlayerUiState())
     override val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
@@ -55,10 +56,7 @@ abstract class BasePlayerViewModel : PlayerViewModel {
         _uiState.value = _uiState.value.copy(playbackSpeed = speed)
     }
 
-    override fun loadEpisode(
-        episode: Episode,
-        podcast: Podcast,
-    ) {
+    override fun loadEpisode(episode: Episode, podcast: Podcast) {
         _uiState.value =
             _uiState.value.copy(
                 episode = episode,

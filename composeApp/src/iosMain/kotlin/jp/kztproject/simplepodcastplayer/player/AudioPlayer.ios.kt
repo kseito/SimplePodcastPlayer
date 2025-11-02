@@ -10,20 +10,48 @@ import platform.AVFoundation.currentTime
 import platform.AVFoundation.rate
 import platform.AVFoundation.duration
 import platform.Foundation.NSURL
+import platform.Foundation.NSNotificationCenter
+import platform.Foundation.NSNotification
+import platform.Foundation.NSNumber
 import platform.CoreMedia.CMTimeMake
 import platform.CoreMedia.CMTimeGetSeconds
+import platform.AVFAudio.AVAudioSession
+import platform.MediaPlayer.MPRemoteCommandCenter
+import platform.MediaPlayer.MPRemoteCommandHandlerStatusSuccess
+import platform.MediaPlayer.MPNowPlayingInfoCenter
+import platform.MediaPlayer.MPMediaItemPropertyTitle
+import platform.MediaPlayer.MPMediaItemPropertyArtist
+import platform.MediaPlayer.MPMediaItemPropertyPlaybackDuration
+import platform.MediaPlayer.MPNowPlayingInfoPropertyElapsedPlaybackTime
+import platform.MediaPlayer.MPNowPlayingInfoPropertyPlaybackRate
+import platform.MediaPlayer.MPChangePlaybackPositionCommandEvent
 
 @OptIn(ExperimentalForeignApi::class)
 actual class AudioPlayer {
     private var avPlayer: AVPlayer? = null
     private var currentPlayerItem: AVPlayerItem? = null
 
+    // Now Playing Info
+    private var currentEpisodeTitle: String = ""
+    private var currentPodcastName: String = ""
+
+    // Playback state tracking
+    private var wasPlayingBeforeInterruption = false
+
+    init {
+        setupAudioSession()
+        setupRemoteCommandCenter()
+        setupInterruptionHandling()
+    }
+
     actual fun play() {
         avPlayer?.play()
+        updateNowPlayingInfoInternal()
     }
 
     actual fun pause() {
         avPlayer?.pause()
+        updateNowPlayingInfoInternal()
     }
 
     actual fun seekTo(position: Long) {
@@ -65,4 +93,124 @@ actual class AudioPlayer {
     }
 
     actual fun isPlaying(): Boolean = (avPlayer?.rate ?: 0f) > 0f
+
+    /**
+     * Update Now Playing Info for lock screen and control center display
+     */
+    fun updateNowPlayingInfo(episodeTitle: String, podcastName: String) {
+        currentEpisodeTitle = episodeTitle
+        currentPodcastName = podcastName
+        updateNowPlayingInfoInternal()
+    }
+
+    private fun setupAudioSession() {
+        // AVAudioSession is configured in iOSApp.swift at app launch
+        // No additional setup needed here
+    }
+
+    private fun setupRemoteCommandCenter() {
+        val commandCenter = MPRemoteCommandCenter.sharedCommandCenter()
+
+        // Play command
+        commandCenter.playCommand.setEnabled(true)
+        commandCenter.playCommand.addTargetWithHandler { _ ->
+            play()
+            updateNowPlayingInfoInternal()
+            MPRemoteCommandHandlerStatusSuccess
+        }
+
+        // Pause command
+        commandCenter.pauseCommand.setEnabled(true)
+        commandCenter.pauseCommand.addTargetWithHandler { _ ->
+            pause()
+            updateNowPlayingInfoInternal()
+            MPRemoteCommandHandlerStatusSuccess
+        }
+
+        // Skip forward command (15 seconds)
+        commandCenter.skipForwardCommand.setEnabled(true)
+        commandCenter.skipForwardCommand.preferredIntervals = listOf(15)
+        commandCenter.skipForwardCommand.addTargetWithHandler { _ ->
+            val newPosition = (getCurrentPosition() + 15000).coerceAtMost(getDuration())
+            seekTo(newPosition)
+            updateNowPlayingInfoInternal()
+            MPRemoteCommandHandlerStatusSuccess
+        }
+
+        // Skip backward command (15 seconds)
+        commandCenter.skipBackwardCommand.setEnabled(true)
+        commandCenter.skipBackwardCommand.preferredIntervals = listOf(15)
+        commandCenter.skipBackwardCommand.addTargetWithHandler { _ ->
+            val newPosition = (getCurrentPosition() - 15000).coerceAtLeast(0)
+            seekTo(newPosition)
+            updateNowPlayingInfoInternal()
+            MPRemoteCommandHandlerStatusSuccess
+        }
+
+        // Change playback position command
+        commandCenter.changePlaybackPositionCommand.setEnabled(true)
+        commandCenter.changePlaybackPositionCommand.addTargetWithHandler { event ->
+            val positionEvent = event as? platform.MediaPlayer.MPChangePlaybackPositionCommandEvent
+            positionEvent?.let {
+                val positionInMillis = (it.positionTime * 1000).toLong()
+                seekTo(positionInMillis)
+                updateNowPlayingInfoInternal()
+            }
+            MPRemoteCommandHandlerStatusSuccess
+        }
+    }
+
+    private fun setupInterruptionHandling() {
+        // Add observer for audio interruptions
+        NSNotificationCenter.defaultCenter.addObserverForName(
+            name = "AVAudioSessionInterruptionNotification",
+            `object` = null,
+            queue = null,
+        ) { notification: NSNotification? ->
+            notification?.userInfo?.let { userInfo ->
+                val interruptionType = (userInfo["AVAudioSessionInterruptionTypeKey"] as? NSNumber)?.unsignedLongValue
+
+                when (interruptionType) {
+                    1UL -> { // AVAudioSessionInterruptionTypeBegan = 1
+                        // Audio interruption began (e.g., phone call)
+                        wasPlayingBeforeInterruption = isPlaying()
+                        if (wasPlayingBeforeInterruption) {
+                            pause()
+                        }
+                    }
+
+                    0UL -> { // AVAudioSessionInterruptionTypeEnded = 0
+                        // Audio interruption ended
+                        val options = (userInfo["AVAudioSessionInterruptionOptionKey"] as? NSNumber)?.unsignedLongValue
+                        val shouldResume = options == 1UL // AVAudioSessionInterruptionOptionShouldResume = 1
+
+                        // Resume playback if it was playing before and system suggests resuming
+                        if (wasPlayingBeforeInterruption && shouldResume) {
+                            play()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun updateNowPlayingInfoInternal() {
+        val nowPlayingInfoCenter = MPNowPlayingInfoCenter.defaultCenter()
+        val duration = getDuration()
+        val currentPosition = getCurrentPosition()
+        val playbackRate = avPlayer?.rate ?: 0f
+
+        val nowPlayingInfo = mutableMapOf<Any?, Any?>()
+        nowPlayingInfo[MPMediaItemPropertyTitle] = currentEpisodeTitle
+        nowPlayingInfo[MPMediaItemPropertyArtist] = currentPodcastName
+
+        if (duration > 0) {
+            nowPlayingInfo[MPMediaItemPropertyPlaybackDuration] = duration / 1000.0
+        }
+
+        nowPlayingInfo[MPNowPlayingInfoPropertyElapsedPlaybackTime] = currentPosition / 1000.0
+        nowPlayingInfo[MPNowPlayingInfoPropertyPlaybackRate] = playbackRate
+
+        nowPlayingInfoCenter.nowPlayingInfo = nowPlayingInfo
+    }
 }

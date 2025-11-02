@@ -1,5 +1,7 @@
 package jp.kztproject.simplepodcastplayer.screen
 
+import jp.kztproject.simplepodcastplayer.data.Episode
+import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
@@ -27,4 +29,14 @@ class PlayerViewModelImpl : BasePlayerViewModel() {
         saveCurrentPosition()
     }
 
+    override fun loadEpisode(episode: Episode, podcast: Podcast) {
+        // Call parent implementation to handle loading
+        super.loadEpisode(episode, podcast)
+
+        // Update Now Playing info for lock screen and control center
+        audioPlayer.updateNowPlayingInfo(
+            episodeTitle = episode.title,
+            podcastName = podcast.trackName,
+        )
+    }
 }
