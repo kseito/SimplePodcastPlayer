@@ -14,6 +14,8 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.create
 
+class DownloadDataCreationException(message: String) : IllegalStateException(message)
+
 actual class AudioDownloader {
     private val httpClient = HttpClient()
 
@@ -67,7 +69,7 @@ actual class AudioDownloader {
                         attributes = null,
                     )
                 } else {
-                    throw Exception("Failed to create NSData")
+                    throw DownloadDataCreationException("Failed to create NSData from downloaded bytes")
                 }
             }
 
