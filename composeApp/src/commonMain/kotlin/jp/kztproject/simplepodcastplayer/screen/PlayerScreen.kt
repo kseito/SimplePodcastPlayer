@@ -36,6 +36,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import jp.kztproject.simplepodcastplayer.data.Episode
+import jp.kztproject.simplepodcastplayer.data.Podcast
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -206,4 +211,53 @@ private fun formatTime(milliseconds: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "$minutes:${seconds.toString().padStart(2, '0')}"
+}
+
+// Mock ViewModel for Preview
+private class PreviewPlayerViewModel : PlayerViewModel {
+    private val _uiState = MutableStateFlow(
+        PlayerUiState(
+            podcast = Podcast(
+                trackId = 1,
+                trackName = "Sample Podcast",
+                artistName = "Podcast Creator",
+                artworkUrl60 = null,
+                artworkUrl100 = null,
+            ),
+            episode = Episode(
+                id = "episode-1",
+                podcastId = "podcast-1",
+                title = "Episode 1: Introduction to Podcasting",
+                description = "In this episode, we explore the fundamentals of podcasting and how to get started with your own show.",
+                audioUrl = "https://example.com/episode1.mp3",
+                duration = 1800000, // 30 minutes
+                publishedAt = "2024-01-01T00:00:00Z",
+                listened = false,
+            ),
+            isPlaying = true,
+            isLoading = false,
+            currentPosition = 600000, // 10 minutes
+            duration = 1800000, // 30 minutes
+        )
+    )
+    override val uiState: StateFlow<PlayerUiState> = _uiState
+    override fun play() {}
+    override fun pause() {}
+    override fun seekTo(position: Long) {}
+    override fun skipForward(seconds: Int) {}
+    override fun skipBackward(seconds: Int) {}
+    override fun setPlaybackSpeed(speed: Float) {}
+    override fun loadEpisode(episode: Episode, podcast: Podcast) {}
+    override fun release() {}
+}
+
+@Preview
+@Composable
+fun PlayerScreenPreview() {
+    MaterialTheme {
+        PlayerScreen(
+            viewModel = PreviewPlayerViewModel(),
+            onNavigateBack = {}
+        )
+    }
 }
