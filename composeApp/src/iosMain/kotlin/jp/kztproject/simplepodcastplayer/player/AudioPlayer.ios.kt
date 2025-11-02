@@ -15,7 +15,6 @@ import platform.Foundation.NSNotification
 import platform.Foundation.NSNumber
 import platform.CoreMedia.CMTimeMake
 import platform.CoreMedia.CMTimeGetSeconds
-import platform.AVFAudio.AVAudioSession
 import platform.MediaPlayer.MPRemoteCommandCenter
 import platform.MediaPlayer.MPRemoteCommandHandlerStatusSuccess
 import platform.MediaPlayer.MPNowPlayingInfoCenter

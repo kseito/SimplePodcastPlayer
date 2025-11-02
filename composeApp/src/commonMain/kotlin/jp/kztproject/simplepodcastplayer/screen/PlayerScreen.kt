@@ -121,11 +121,7 @@ private fun EpisodeArtwork(artworkUrl: String?) {
 }
 
 @Composable
-private fun EpisodeInformation(
-    title: String,
-    podcastName: String,
-    description: String,
-) {
+private fun EpisodeInformation(title: String, podcastName: String, description: String) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -177,10 +173,7 @@ private data class PlaybackActions(
 )
 
 @Composable
-private fun PlaybackControls(
-    state: PlaybackState,
-    actions: PlaybackActions,
-) {
+private fun PlaybackControls(state: PlaybackState, actions: PlaybackActions) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -209,11 +202,7 @@ private fun PlaybackControls(
 }
 
 @Composable
-private fun ProgressBar(
-    currentPosition: Long,
-    duration: Long,
-    onSeek: (Float) -> Unit,
-) {
+private fun ProgressBar(currentPosition: Long, duration: Long, onSeek: (Float) -> Unit) {
     Slider(
         value = if (duration > 0) currentPosition.toFloat() else 0f,
         onValueChange = onSeek,
@@ -223,10 +212,7 @@ private fun ProgressBar(
 }
 
 @Composable
-private fun TimeLabels(
-    currentPosition: Long,
-    duration: Long,
-) {
+private fun TimeLabels(currentPosition: Long, duration: Long) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -272,11 +258,7 @@ private fun ControlButtons(
 }
 
 @Composable
-private fun PlayPauseButton(
-    isPlaying: Boolean,
-    isLoading: Boolean,
-    onClick: () -> Unit,
-) {
+private fun PlayPauseButton(isPlaying: Boolean, isLoading: Boolean, onClick: () -> Unit) {
     FilledIconButton(
         onClick = onClick,
         modifier = Modifier.size(80.dp),
@@ -323,8 +305,8 @@ private class PreviewPlayerViewModel : PlayerViewModel {
                 podcastId = "podcast-1",
                 title = "Episode 1: Introduction to Podcasting",
                 description =
-                    "In this episode, we explore the fundamentals of podcasting " +
-                        "and how to get started with your own show.",
+                "In this episode, we explore the fundamentals of podcasting " +
+                    "and how to get started with your own show.",
                 audioUrl = "https://example.com/episode1.mp3",
                 duration = 1800000, // 30 minutes
                 publishedAt = "2024-01-01T00:00:00Z",
@@ -334,7 +316,7 @@ private class PreviewPlayerViewModel : PlayerViewModel {
             isLoading = false,
             currentPosition = 600000, // 10 minutes
             duration = 1800000, // 30 minutes
-        )
+        ),
     )
     override val uiState: StateFlow<PlayerUiState> = _uiState
     override fun play() {}
@@ -353,7 +335,7 @@ fun PlayerScreenPreview() {
     MaterialTheme {
         PlayerScreen(
             viewModel = PreviewPlayerViewModel(),
-            onNavigateBack = {}
+            onNavigateBack = {},
         )
     }
 }
