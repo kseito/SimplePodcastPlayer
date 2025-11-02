@@ -70,138 +70,232 @@ fun PlayerScreen(viewModel: PlayerViewModel, onNavigateBack: () -> Unit) {
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Episode Artwork
-            AsyncImage(
-                model = uiState.podcast?.bestArtworkUrl(),
-                contentDescription = "Episode artwork",
-                modifier =
-                Modifier
-                    .size(300.dp)
-                    .clip(RoundedCornerShape(8.dp)),
+            EpisodeArtwork(artworkUrl = uiState.podcast?.bestArtworkUrl())
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            EpisodeInformation(
+                title = uiState.episode?.title ?: "",
+                podcastName = uiState.podcast?.trackName ?: "",
+                description = uiState.episode?.description ?: "",
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Episode Information
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = uiState.episode?.title ?: "",
-                    style = MaterialTheme.typography.headlineMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = uiState.podcast?.trackName ?: "",
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = uiState.episode?.description ?: "",
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    textAlign = TextAlign.Center,
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Playback Controls
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                // Progress Bar
-                Slider(
-                    value = if (uiState.duration > 0) uiState.currentPosition.toFloat() else 0f,
-                    onValueChange = { viewModel.seekTo(it.toLong()) },
-                    valueRange = 0f..uiState.duration.toFloat().coerceAtLeast(1f),
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                // Time Labels
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        text = formatTime(uiState.currentPosition),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Text(
-                        text = formatTime(uiState.duration),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Control Buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // 15 seconds backward
-                    TextButton(
-                        onClick = { viewModel.skipBackward(15) },
-                    ) {
-                        Text("-15s", style = MaterialTheme.typography.titleLarge)
-                    }
-
-                    // Play/Pause Button
-                    FilledIconButton(
-                        onClick = {
-                            if (uiState.isPlaying) {
-                                viewModel.pause()
-                            } else {
-                                viewModel.play()
-                            }
-                        },
-                        modifier = Modifier.size(80.dp),
-                        colors =
-                        IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                        ),
-                    ) {
-                        if (uiState.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(40.dp),
-                                color = MaterialTheme.colorScheme.onPrimary,
-                            )
+            PlaybackControls(
+                state = PlaybackState(
+                    isPlaying = uiState.isPlaying,
+                    isLoading = uiState.isLoading,
+                    currentPosition = uiState.currentPosition,
+                    duration = uiState.duration,
+                ),
+                actions = PlaybackActions(
+                    onPlayPause = {
+                        if (uiState.isPlaying) {
+                            viewModel.pause()
                         } else {
-                            Icon(
-                                if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                                modifier = Modifier.size(48.dp),
-                            )
+                            viewModel.play()
                         }
-                    }
-
-                    // 15 seconds forward
-                    TextButton(
-                        onClick = { viewModel.skipForward(15) },
-                    ) {
-                        Text("+15s", style = MaterialTheme.typography.titleLarge)
-                    }
-                }
-            }
+                    },
+                    onSeek = { viewModel.seekTo(it.toLong()) },
+                    onSkipBackward = { viewModel.skipBackward(15) },
+                    onSkipForward = { viewModel.skipForward(15) },
+                ),
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+private fun EpisodeArtwork(artworkUrl: String?) {
+    AsyncImage(
+        model = artworkUrl,
+        contentDescription = "Episode artwork",
+        modifier =
+        Modifier
+            .size(300.dp)
+            .clip(RoundedCornerShape(8.dp)),
+    )
+}
+
+@Composable
+private fun EpisodeInformation(
+    title: String,
+    podcastName: String,
+    description: String,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineMedium,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = podcastName,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+private data class PlaybackState(
+    val isPlaying: Boolean,
+    val isLoading: Boolean,
+    val currentPosition: Long,
+    val duration: Long,
+)
+
+private data class PlaybackActions(
+    val onPlayPause: () -> Unit,
+    val onSeek: (Float) -> Unit,
+    val onSkipBackward: () -> Unit,
+    val onSkipForward: () -> Unit,
+)
+
+@Composable
+private fun PlaybackControls(
+    state: PlaybackState,
+    actions: PlaybackActions,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ProgressBar(
+            currentPosition = state.currentPosition,
+            duration = state.duration,
+            onSeek = actions.onSeek,
+        )
+
+        TimeLabels(
+            currentPosition = state.currentPosition,
+            duration = state.duration,
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        ControlButtons(
+            isPlaying = state.isPlaying,
+            isLoading = state.isLoading,
+            onPlayPause = actions.onPlayPause,
+            onSkipBackward = actions.onSkipBackward,
+            onSkipForward = actions.onSkipForward,
+        )
+    }
+}
+
+@Composable
+private fun ProgressBar(
+    currentPosition: Long,
+    duration: Long,
+    onSeek: (Float) -> Unit,
+) {
+    Slider(
+        value = if (duration > 0) currentPosition.toFloat() else 0f,
+        onValueChange = onSeek,
+        valueRange = 0f..duration.toFloat().coerceAtLeast(1f),
+        modifier = Modifier.fillMaxWidth(),
+    )
+}
+
+@Composable
+private fun TimeLabels(
+    currentPosition: Long,
+    duration: Long,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = formatTime(currentPosition),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Text(
+            text = formatTime(duration),
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+}
+
+@Composable
+private fun ControlButtons(
+    isPlaying: Boolean,
+    isLoading: Boolean,
+    onPlayPause: () -> Unit,
+    onSkipBackward: () -> Unit,
+    onSkipForward: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TextButton(onClick = onSkipBackward) {
+            Text("-15s", style = MaterialTheme.typography.titleLarge)
+        }
+
+        PlayPauseButton(
+            isPlaying = isPlaying,
+            isLoading = isLoading,
+            onClick = onPlayPause,
+        )
+
+        TextButton(onClick = onSkipForward) {
+            Text("+15s", style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+@Composable
+private fun PlayPauseButton(
+    isPlaying: Boolean,
+    isLoading: Boolean,
+    onClick: () -> Unit,
+) {
+    FilledIconButton(
+        onClick = onClick,
+        modifier = Modifier.size(80.dp),
+        colors =
+        IconButtonDefaults.filledIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+        ),
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(40.dp),
+                color = MaterialTheme.colorScheme.onPrimary,
+            )
+        } else {
+            Icon(
+                if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "Pause" else "Play",
+                modifier = Modifier.size(48.dp),
+            )
         }
     }
 }
@@ -228,7 +322,9 @@ private class PreviewPlayerViewModel : PlayerViewModel {
                 id = "episode-1",
                 podcastId = "podcast-1",
                 title = "Episode 1: Introduction to Podcasting",
-                description = "In this episode, we explore the fundamentals of podcasting and how to get started with your own show.",
+                description =
+                    "In this episode, we explore the fundamentals of podcasting " +
+                        "and how to get started with your own show.",
                 audioUrl = "https://example.com/episode1.mp3",
                 duration = 1800000, // 30 minutes
                 publishedAt = "2024-01-01T00:00:00Z",
