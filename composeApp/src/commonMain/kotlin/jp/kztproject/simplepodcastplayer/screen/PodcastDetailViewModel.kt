@@ -167,10 +167,6 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
         super.onCleared()
         rssService.close()
     }
-
-    companion object {
-        private const val SUBSCRIPTION_DELAY_MS = 500L
-    }
 }
 
 data class PodcastDetailUiState(
