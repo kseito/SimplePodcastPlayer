@@ -1,0 +1,44 @@
+package jp.kztproject.simplepodcastplayer.data.repository
+
+import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
+import jp.kztproject.simplepodcastplayer.download.AudioDownloader
+import jp.kztproject.simplepodcastplayer.download.DownloadState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onEach
+import kotlinx.datetime.Clock
+
+actual class DownloadRepository {
+    private val audioDownloader = AudioDownloader()
+    private val database = DatabaseBuilder.build()
+    private val episodeDao = database.episodeDao()
+
+    actual suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> =
+        audioDownloader.downloadAudio(audioUrl, episodeId).onEach { state ->
+            if (state is DownloadState.Completed) {
+                val localFilePath = audioDownloader.getLocalFilePath(episodeId)
+                episodeDao.updateDownloadStatus(
+                    episodeId = episodeId,
+                    isDownloaded = true,
+                    localFilePath = localFilePath,
+                    downloadedAt = Clock.System.now().toEpochMilliseconds(),
+                )
+            }
+        }
+
+    actual suspend fun deleteDownload(episodeId: String): Boolean {
+        val deleted = audioDownloader.deleteDownload(episodeId)
+        if (deleted) {
+            episodeDao.updateDownloadStatus(
+                episodeId = episodeId,
+                isDownloaded = false,
+                localFilePath = null,
+                downloadedAt = 0L,
+            )
+        }
+        return deleted
+    }
+
+    actual fun getLocalFilePath(episodeId: String): String? = audioDownloader.getLocalFilePath(episodeId)
+
+    actual fun isDownloaded(episodeId: String): Boolean = audioDownloader.isDownloaded(episodeId)
+}
