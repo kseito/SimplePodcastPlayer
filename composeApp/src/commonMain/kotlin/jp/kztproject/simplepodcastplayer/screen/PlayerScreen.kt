@@ -39,6 +39,7 @@ import coil3.compose.AsyncImage
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.util.htmlToAnnotatedString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -148,7 +149,7 @@ private fun EpisodeInformation(title: String, podcastName: String, description: 
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = description,
+            text = description.htmlToAnnotatedString(),
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
