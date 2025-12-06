@@ -41,12 +41,17 @@ class PodcastSearchViewModel : ViewModel() {
             _errorMessage.update { null }
 
             try {
+                println("PodcastSearchViewModel: Searching for: $query")
                 val response = apiClient.searchPodcasts(term = query)
+                println("PodcastSearchViewModel: Found ${response.results.size} podcasts")
                 _podcasts.update { response.results }
             } catch (e: Exception) {
+                println("PodcastSearchViewModel: Error occurred: ${e.message}")
+                e.printStackTrace()
                 _errorMessage.update { "検索中にエラーが発生しました: ${e.message}" }
                 _podcasts.update { emptyList() }
             } finally {
+                println("PodcastSearchViewModel: Loading finished")
                 _isLoading.update { false }
             }
         }

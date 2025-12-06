@@ -48,9 +48,13 @@ fun PodcastSearchScreen(
     viewModel: PodcastSearchViewModel = viewModel { PodcastSearchViewModel() },
 ) {
     val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val errorMessage by viewModel.errorMessage.collectAsStateWithLifecycle()
 
     PodcastSearchScreenContent(
         podcasts = podcasts,
+        isLoading = isLoading,
+        errorMessage = errorMessage,
         onNavigateToList = onNavigateToList,
         onNavigateToDetail = onNavigateToDetail,
         onSearch = { query ->
@@ -63,6 +67,8 @@ fun PodcastSearchScreen(
 @Composable
 private fun PodcastSearchScreenContent(
     podcasts: List<Podcast>,
+    isLoading: Boolean = false,
+    errorMessage: String? = null,
     onNavigateToList: () -> Unit,
     onNavigateToDetail: (Podcast) -> Unit = {},
     onSearch: ((String) -> Unit)? = null,
@@ -118,23 +124,60 @@ private fun PodcastSearchScreenContent(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Error message
+        errorMessage?.let { error ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+            ) {
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
         // Podcast results
-        if (podcasts.isNotEmpty()) {
-            LazyColumn {
-                items(podcasts) { podcast ->
-                    PodcastItem(
-                        podcast = podcast,
-                        onClick = { onNavigateToDetail(podcast) },
-                        modifier = Modifier.padding(bottom = 8.dp),
-                    )
+        when {
+            isLoading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        androidx.compose.material3.CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "Searching...",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
-        } else {
-            Text(
-                text = "No podcasts found. Try searching for a topic or podcast name.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            podcasts.isNotEmpty() -> {
+                LazyColumn {
+                    items(podcasts) { podcast ->
+                        PodcastItem(
+                            podcast = podcast,
+                            onClick = { onNavigateToDetail(podcast) },
+                            modifier = Modifier.padding(bottom = 8.dp),
+                        )
+                    }
+                }
+            }
+            else -> {
+                Text(
+                    text = "No podcasts found. Try searching for a topic or podcast name.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
