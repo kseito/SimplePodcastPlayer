@@ -61,6 +61,28 @@ fun PlayerScreen(viewModel: PlayerViewModel, onNavigateBack: () -> Unit) {
                 },
             )
         },
+        bottomBar = {
+            PlaybackControls(
+                state = PlaybackState(
+                    isPlaying = uiState.isPlaying,
+                    isLoading = uiState.isLoading,
+                    currentPosition = uiState.currentPosition,
+                    duration = uiState.duration,
+                ),
+                actions = PlaybackActions(
+                    onPlayPause = {
+                        if (uiState.isPlaying) {
+                            viewModel.pause()
+                        } else {
+                            viewModel.play()
+                        }
+                    },
+                    onSeek = { viewModel.seekTo(it.toLong()) },
+                    onSkipBackward = { viewModel.skipBackward(15) },
+                    onSkipForward = { viewModel.skipForward(15) },
+                ),
+            )
+        },
     ) { paddingValues ->
         Column(
             modifier =
@@ -81,29 +103,6 @@ fun PlayerScreen(viewModel: PlayerViewModel, onNavigateBack: () -> Unit) {
                 title = uiState.episode?.title ?: "",
                 podcastName = uiState.podcast?.trackName ?: "",
                 description = uiState.episode?.description ?: "",
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            PlaybackControls(
-                state = PlaybackState(
-                    isPlaying = uiState.isPlaying,
-                    isLoading = uiState.isLoading,
-                    currentPosition = uiState.currentPosition,
-                    duration = uiState.duration,
-                ),
-                actions = PlaybackActions(
-                    onPlayPause = {
-                        if (uiState.isPlaying) {
-                            viewModel.pause()
-                        } else {
-                            viewModel.play()
-                        }
-                    },
-                    onSeek = { viewModel.seekTo(it.toLong()) },
-                    onSkipBackward = { viewModel.skipBackward(15) },
-                    onSkipForward = { viewModel.skipForward(15) },
-                ),
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -176,7 +175,10 @@ private data class PlaybackActions(
 @Composable
 private fun PlaybackControls(state: PlaybackState, actions: PlaybackActions) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         ProgressBar(
