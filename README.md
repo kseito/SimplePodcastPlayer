@@ -48,7 +48,7 @@ SimplePodcastPlayer is a cross-platform podcast application built with Kotlin Mu
 
 ### Key Dependencies
 
-- Kotlin 2.2.0 with Compose Multiplatform 1.8.2
+- Kotlin 2.2.20 with Compose Multiplatform 1.8.2
 - Navigation Compose for screen navigation
 - Material3 for UI components
 - Lifecycle ViewModel and Runtime Compose for state management
