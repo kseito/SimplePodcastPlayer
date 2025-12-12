@@ -27,7 +27,6 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
             isLoading = true,
         )
         loadEpisodes(podcast)
-        checkSubscriptionStatus(podcast)
     }
 
     fun toggleSubscription() {
@@ -101,38 +100,16 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
     private fun loadEpisodes(podcast: Podcast) {
         viewModelScope.launch {
             try {
-                val episodes = if (podcast.feedUrl.isNullOrBlank()) {
-                    _uiState.value = _uiState.value.copy(
-                        error = "No RSS feed URL available for this podcast",
-                    )
-                    emptyList()
+                // Check if subscribed first to decide data source
+                val isSubscribed = podcastRepository.isSubscribed(podcast.trackId)
+                _uiState.value = _uiState.value.copy(isSubscribed = isSubscribed)
+
+                val episodes = if (isSubscribed) {
+                    // Subscribed: Load from database (offline support)
+                    loadEpisodesFromDatabase(podcast)
                 } else {
-                    // Fetch real episodes from RSS feed
-                    val result = rssService.fetchEpisodes(podcast.feedUrl)
-                    if (result.isSuccess) {
-                        val parsedEpisodes = result.getOrNull() ?: emptyList()
-                        // Store loaded episodes for subscription
-                        loadedEpisodes =
-                            parsedEpisodes.map { parsedEpisode ->
-                                Episode(
-                                    id = parsedEpisode.id,
-                                    podcastId = podcast.trackId.toString(),
-                                    title = parsedEpisode.title,
-                                    description = parsedEpisode.description,
-                                    audioUrl = parsedEpisode.audioUrl,
-                                    duration = parsedEpisode.duration,
-                                    publishedAt = parsedEpisode.publishedAt,
-                                    listened = false,
-                                )
-                            }
-                        parsedEpisodes.map { it.toDisplayModel() }
-                    } else {
-                        val error = result.exceptionOrNull()
-                        _uiState.value = _uiState.value.copy(
-                            error = "Failed to load RSS feed: ${error?.message}",
-                        )
-                        emptyList()
-                    }
+                    // Not subscribed: Fetch from RSS feed
+                    loadEpisodesFromRss(podcast)
                 }
 
                 _uiState.value = _uiState.value.copy(
@@ -148,18 +125,44 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
         }
     }
 
-    private fun checkSubscriptionStatus(podcast: Podcast) {
-        viewModelScope.launch {
-            try {
-                // Check subscription status from database
-                val isSubscribed = podcastRepository.isSubscribed(podcast.trackId)
+    private suspend fun loadEpisodesFromDatabase(podcast: Podcast): List<EpisodeDisplayModel> {
+        val episodes = podcastRepository.getEpisodesByPodcastId(podcast.trackId.toString())
+        loadedEpisodes = episodes
+        return episodes.map { it.toDisplayModel() }
+    }
 
-                _uiState.value = _uiState.value.copy(
-                    isSubscribed = isSubscribed,
-                )
-            } catch (_: Exception) {
-                // Ignore subscription check errors for now
-            }
+    private suspend fun loadEpisodesFromRss(podcast: Podcast): List<EpisodeDisplayModel> {
+        if (podcast.feedUrl.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(
+                error = "No RSS feed URL available for this podcast",
+            )
+            return emptyList()
+        }
+
+        val result = rssService.fetchEpisodes(podcast.feedUrl)
+        if (result.isSuccess) {
+            val parsedEpisodes = result.getOrNull() ?: emptyList()
+            // Store loaded episodes for subscription
+            loadedEpisodes =
+                parsedEpisodes.map { parsedEpisode ->
+                    Episode(
+                        id = parsedEpisode.id,
+                        podcastId = podcast.trackId.toString(),
+                        title = parsedEpisode.title,
+                        description = parsedEpisode.description,
+                        audioUrl = parsedEpisode.audioUrl,
+                        duration = parsedEpisode.duration,
+                        publishedAt = parsedEpisode.publishedAt,
+                        listened = false,
+                    )
+                }
+            return parsedEpisodes.map { it.toDisplayModel() }
+        } else {
+            val error = result.exceptionOrNull()
+            _uiState.value = _uiState.value.copy(
+                error = "Failed to load RSS feed: ${error?.message}",
+            )
+            return emptyList()
         }
     }
 
