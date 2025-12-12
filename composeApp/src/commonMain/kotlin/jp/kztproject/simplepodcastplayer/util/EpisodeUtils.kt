@@ -10,7 +10,7 @@ private const val TIME_FORMAT_PADDING = 2
 private const val DATE_PARTS_COUNT = 3
 private const val DAY_LENGTH = 2
 
-fun Episode.toDisplayModel(): EpisodeDisplayModel = EpisodeDisplayModel(
+fun Episode.toDisplayModel(isDownloaded: Boolean = false): EpisodeDisplayModel = EpisodeDisplayModel(
     id = id,
     title = title,
     description = description,
@@ -18,9 +18,10 @@ fun Episode.toDisplayModel(): EpisodeDisplayModel = EpisodeDisplayModel(
     duration = formatDuration(duration),
     audioUrl = audioUrl,
     listened = listened,
+    isDownloaded = isDownloaded,
 )
 
-fun ParsedEpisode.toDisplayModel(): EpisodeDisplayModel = EpisodeDisplayModel(
+fun ParsedEpisode.toDisplayModel(isDownloaded: Boolean = false): EpisodeDisplayModel = EpisodeDisplayModel(
     id = id,
     title = title,
     description = description,
@@ -28,6 +29,7 @@ fun ParsedEpisode.toDisplayModel(): EpisodeDisplayModel = EpisodeDisplayModel(
     duration = formatDuration(duration),
     audioUrl = audioUrl,
     listened = false, // Default to not listened for RSS episodes
+    isDownloaded = isDownloaded,
 )
 
 fun formatDuration(durationInSeconds: Long): String {

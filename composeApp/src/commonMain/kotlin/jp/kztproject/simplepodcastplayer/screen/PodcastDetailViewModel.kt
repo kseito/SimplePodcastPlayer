@@ -6,7 +6,9 @@ import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.RssService
+import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepositoryBuilder
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
+import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.util.toDisplayModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +21,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
 
     private val rssService = RssService()
     private val podcastRepository = PodcastRepository()
+    private val downloadRepository = DownloadRepositoryBuilder.build()
     private var loadedEpisodes: List<Episode> = emptyList()
 
     fun initialize(podcast: Podcast) {
@@ -53,10 +56,11 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                     isSubscriptionLoading = false,
                 )
             } catch (e: Exception) {
+                println("PodcastDetailViewModel: Failed to update subscription: ${e.stackTraceToString()}")
                 _uiState.value = _uiState.value.copy(
                     isSubscribed = !newSubscriptionStatus,
                     isSubscriptionLoading = false,
-                    error = "Failed to update subscription: ${e.message}",
+                    error = "Failed to update subscription",
                 )
             }
         }
@@ -117,9 +121,10 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                     isLoading = false,
                 )
             } catch (e: Exception) {
+                println("PodcastDetailViewModel: Failed to load episodes: ${e.stackTraceToString()}")
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Failed to load episodes: ${e.message}",
+                    error = "Failed to load episodes",
                 )
             }
         }
@@ -128,7 +133,10 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
     private suspend fun loadEpisodesFromDatabase(podcast: Podcast): List<EpisodeDisplayModel> {
         val episodes = podcastRepository.getEpisodesByPodcastId(podcast.trackId.toString())
         loadedEpisodes = episodes
-        return episodes.map { it.toDisplayModel() }
+        return episodes.map { episode ->
+            val isDownloaded = downloadRepository.isDownloaded(episode.id)
+            episode.toDisplayModel(isDownloaded)
+        }
     }
 
     private suspend fun loadEpisodesFromRss(podcast: Podcast): List<EpisodeDisplayModel> {
@@ -156,14 +164,88 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                         listened = false,
                     )
                 }
-            return parsedEpisodes.map { it.toDisplayModel() }
+            return parsedEpisodes.map { parsedEpisode ->
+                val isDownloaded = downloadRepository.isDownloaded(parsedEpisode.id)
+                parsedEpisode.toDisplayModel(isDownloaded)
+            }
         } else {
             val error = result.exceptionOrNull()
+            println("PodcastDetailViewModel: Failed to load RSS feed: ${error?.stackTraceToString()}")
             _uiState.value = _uiState.value.copy(
-                error = "Failed to load RSS feed: ${error?.message}",
+                error = "Failed to load RSS feed",
             )
             return emptyList()
         }
+    }
+
+    fun downloadEpisode(episodeId: String) {
+        val episode = _uiState.value.episodes.find { it.id == episodeId } ?: return
+
+        // Update download state to downloading
+        updateDownloadState(episodeId, DownloadState.Downloading(0f))
+
+        viewModelScope.launch {
+            try {
+                downloadRepository.downloadEpisode(episodeId, episode.audioUrl).collect { state ->
+                    println("PodcastDetailViewModel: Download state update: $state")
+                    updateDownloadState(episodeId, state)
+
+                    if (state is DownloadState.Completed) {
+                        // Update episode's isDownloaded status
+                        updateEpisodeDownloadStatus(episodeId, true)
+                    } else if (state is DownloadState.Failed) {
+                        println("PodcastDetailViewModel: Download failed: ${state.error}")
+                        _uiState.value = _uiState.value.copy(
+                            error = "Download failed",
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                println("PodcastDetailViewModel: Download failed: ${e.stackTraceToString()}")
+                updateDownloadState(episodeId, DownloadState.Failed(e.message ?: "Unknown error"))
+                _uiState.value = _uiState.value.copy(
+                    error = "Download failed",
+                )
+            }
+        }
+    }
+
+    fun deleteDownload(episodeId: String) {
+        viewModelScope.launch {
+            try {
+                val deleted = downloadRepository.deleteDownload(episodeId)
+                if (deleted) {
+                    updateEpisodeDownloadStatus(episodeId, false)
+                    updateDownloadState(episodeId, DownloadState.Idle)
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Failed to delete download",
+                    )
+                }
+            } catch (e: Exception) {
+                println("PodcastDetailViewModel: Failed to delete download: ${e.stackTraceToString()}")
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to delete download",
+                )
+            }
+        }
+    }
+
+    private fun updateDownloadState(episodeId: String, state: DownloadState) {
+        val currentStates = _uiState.value.downloadStates.toMutableMap()
+        currentStates[episodeId] = state
+        _uiState.value = _uiState.value.copy(downloadStates = currentStates)
+    }
+
+    private fun updateEpisodeDownloadStatus(episodeId: String, isDownloaded: Boolean) {
+        val updatedEpisodes = _uiState.value.episodes.map { episode ->
+            if (episode.id == episodeId) {
+                episode.copy(isDownloaded = isDownloaded)
+            } else {
+                episode
+            }
+        }
+        _uiState.value = _uiState.value.copy(episodes = updatedEpisodes)
     }
 
     override fun onCleared() {
@@ -179,4 +261,5 @@ data class PodcastDetailUiState(
     val isLoading: Boolean = false,
     val isSubscriptionLoading: Boolean = false,
     val error: String? = null,
+    val downloadStates: Map<String, DownloadState> = emptyMap(),
 )

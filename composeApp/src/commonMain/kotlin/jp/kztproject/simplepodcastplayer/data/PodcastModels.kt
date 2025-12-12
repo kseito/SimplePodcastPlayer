@@ -92,4 +92,5 @@ data class EpisodeDisplayModel(
     val duration: String,
     val audioUrl: String,
     val listened: Boolean,
+    val isDownloaded: Boolean = false,
 )

@@ -65,7 +65,12 @@ actual class AudioPlayer {
     }
 
     actual fun loadUrl(url: String) {
-        val nsUrl = NSURL.URLWithString(url) ?: return
+        // Use fileURLWithPath for local files, URLWithString for remote URLs
+        val nsUrl = if (url.startsWith("/")) {
+            NSURL.fileURLWithPath(url)
+        } else {
+            NSURL.URLWithString(url)
+        } ?: return
         currentPlayerItem = AVPlayerItem(uRL = nsUrl)
         avPlayer = AVPlayer(playerItem = currentPlayerItem)
     }
