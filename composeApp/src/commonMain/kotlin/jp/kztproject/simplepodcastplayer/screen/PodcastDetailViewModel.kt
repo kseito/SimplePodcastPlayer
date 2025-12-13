@@ -14,6 +14,7 @@ import jp.kztproject.simplepodcastplayer.util.toDisplayModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> }) : ViewModel() {
@@ -189,24 +190,49 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
             try {
                 downloadRepository.downloadEpisode(episodeId, episode.audioUrl).collect { state ->
                     Napier.d("Download state update: $state")
-                    updateDownloadState(episodeId, state)
 
-                    if (state is DownloadState.Completed) {
-                        // Update episode's isDownloaded status
-                        updateEpisodeDownloadStatus(episodeId, true)
-                    } else if (state is DownloadState.Failed) {
-                        Napier.e("Download failed: ${state.error}")
-                        _uiState.value = _uiState.value.copy(
-                            error = "Download failed",
+                    _uiState.update { currentState ->
+                        val updatedDownloadStates = currentState.downloadStates.toMutableMap()
+                        updatedDownloadStates[episodeId] = state
+
+                        val updatedEpisodes = when (state) {
+                            is DownloadState.Completed -> {
+                                // Update episode's isDownloaded status
+                                currentState.episodes.map { episode ->
+                                    if (episode.id == episodeId) {
+                                        episode.copy(isDownloaded = true)
+                                    } else {
+                                        episode
+                                    }
+                                }
+                            }
+                            else -> currentState.episodes
+                        }
+
+                        val errorMessage = if (state is DownloadState.Failed) {
+                            Napier.e("Download failed: ${state.error}")
+                            "Download failed"
+                        } else {
+                            currentState.error
+                        }
+
+                        currentState.copy(
+                            downloadStates = updatedDownloadStates,
+                            episodes = updatedEpisodes,
+                            error = errorMessage
                         )
                     }
                 }
             } catch (e: Exception) {
                 Napier.e("Download failed", e)
-                updateDownloadState(episodeId, DownloadState.Failed(e.message ?: "Unknown error"))
-                _uiState.value = _uiState.value.copy(
-                    error = "Download failed",
-                )
+                _uiState.update { currentState ->
+                    val updatedDownloadStates = currentState.downloadStates.toMutableMap()
+                    updatedDownloadStates[episodeId] = DownloadState.Failed(e.message ?: "Unknown error")
+                    currentState.copy(
+                        downloadStates = updatedDownloadStates,
+                        error = "Download failed"
+                    )
+                }
             }
         }
     }
@@ -215,19 +241,30 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
         viewModelScope.launch {
             try {
                 val deleted = downloadRepository.deleteDownload(episodeId)
-                if (deleted) {
-                    updateEpisodeDownloadStatus(episodeId, false)
-                    updateDownloadState(episodeId, DownloadState.Idle)
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        error = "Failed to delete download",
-                    )
+                _uiState.update { currentState ->
+                    if (deleted) {
+                        val updatedDownloadStates = currentState.downloadStates.toMutableMap()
+                        updatedDownloadStates[episodeId] = DownloadState.Idle
+
+                        val updatedEpisodes = currentState.episodes.map { episode ->
+                            if (episode.id == episodeId) {
+                                episode.copy(isDownloaded = false)
+                            } else {
+                                episode
+                            }
+                        }
+
+                        currentState.copy(
+                            downloadStates = updatedDownloadStates,
+                            episodes = updatedEpisodes
+                        )
+                    } else {
+                        currentState.copy(error = "Failed to delete download")
+                    }
                 }
             } catch (e: Exception) {
                 Napier.e("Failed to delete download", e)
-                _uiState.value = _uiState.value.copy(
-                    error = "Failed to delete download",
-                )
+                _uiState.update { it.copy(error = "Failed to delete download") }
             }
         }
     }
