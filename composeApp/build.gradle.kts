@@ -66,6 +66,7 @@ kotlin {
             implementation(libs.coil.network.ktor)
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
+            implementation(libs.napier)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

@@ -2,6 +2,7 @@ package jp.kztproject.simplepodcastplayer.screen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.aakira.napier.Napier
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
@@ -56,7 +57,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                     isSubscriptionLoading = false,
                 )
             } catch (e: Exception) {
-                println("PodcastDetailViewModel: Failed to update subscription: ${e.stackTraceToString()}")
+                Napier.e("Failed to update subscription", e)
                 _uiState.value = _uiState.value.copy(
                     isSubscribed = !newSubscriptionStatus,
                     isSubscriptionLoading = false,
@@ -121,7 +122,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                     isLoading = false,
                 )
             } catch (e: Exception) {
-                println("PodcastDetailViewModel: Failed to load episodes: ${e.stackTraceToString()}")
+                Napier.e("Failed to load episodes", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = "Failed to load episodes",
@@ -170,7 +171,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
             }
         } else {
             val error = result.exceptionOrNull()
-            println("PodcastDetailViewModel: Failed to load RSS feed: ${error?.stackTraceToString()}")
+            Napier.e("Failed to load RSS feed", error)
             _uiState.value = _uiState.value.copy(
                 error = "Failed to load RSS feed",
             )
@@ -187,21 +188,21 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
         viewModelScope.launch {
             try {
                 downloadRepository.downloadEpisode(episodeId, episode.audioUrl).collect { state ->
-                    println("PodcastDetailViewModel: Download state update: $state")
+                    Napier.d("Download state update: $state")
                     updateDownloadState(episodeId, state)
 
                     if (state is DownloadState.Completed) {
                         // Update episode's isDownloaded status
                         updateEpisodeDownloadStatus(episodeId, true)
                     } else if (state is DownloadState.Failed) {
-                        println("PodcastDetailViewModel: Download failed: ${state.error}")
+                        Napier.e("Download failed: ${state.error}")
                         _uiState.value = _uiState.value.copy(
                             error = "Download failed",
                         )
                     }
                 }
             } catch (e: Exception) {
-                println("PodcastDetailViewModel: Download failed: ${e.stackTraceToString()}")
+                Napier.e("Download failed", e)
                 updateDownloadState(episodeId, DownloadState.Failed(e.message ?: "Unknown error"))
                 _uiState.value = _uiState.value.copy(
                     error = "Download failed",
@@ -223,7 +224,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                     )
                 }
             } catch (e: Exception) {
-                println("PodcastDetailViewModel: Failed to delete download: ${e.stackTraceToString()}")
+                Napier.e("Failed to delete download", e)
                 _uiState.value = _uiState.value.copy(
                     error = "Failed to delete download",
                 )
