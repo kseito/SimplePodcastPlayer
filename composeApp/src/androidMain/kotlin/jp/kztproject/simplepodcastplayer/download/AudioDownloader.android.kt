@@ -9,7 +9,8 @@ import io.ktor.http.contentLength
 import io.ktor.utils.io.readAvailable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.io.File
 
@@ -24,43 +25,41 @@ actual class AudioDownloader(private val context: Context) {
         return downloadDir
     }
 
-    actual suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = flow {
-        emit(DownloadState.Downloading(0f))
+    actual suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = channelFlow {
+        send(DownloadState.Downloading(0f))
 
         try {
             val downloadDir = getDownloadDirectory()
             val fileName = "${episodeId.replace("[^a-zA-Z0-9]".toRegex(), "_")}.mp3"
             val file = File(downloadDir, fileName)
 
-            withContext(Dispatchers.IO) {
-                val response: HttpResponse = httpClient.get(url)
-                val channel = response.bodyAsChannel()
-                val contentLength = response.contentLength() ?: 0L
+            val response: HttpResponse = httpClient.get(url)
+            val channel = response.bodyAsChannel()
+            val contentLength = response.contentLength() ?: 0L
 
-                file.outputStream().use { output ->
-                    val buffer = ByteArray(8192)
-                    var totalBytesRead = 0L
+            file.outputStream().use { output ->
+                val buffer = ByteArray(8192)
+                var totalBytesRead = 0L
 
-                    while (true) {
-                        val bytesRead = channel.readAvailable(buffer)
-                        if (bytesRead == -1) break
+                while (true) {
+                    val bytesRead = channel.readAvailable(buffer)
+                    if (bytesRead == -1) break
 
-                        output.write(buffer, 0, bytesRead)
-                        totalBytesRead += bytesRead
+                    output.write(buffer, 0, bytesRead)
+                    totalBytesRead += bytesRead
 
-                        if (contentLength > 0) {
-                            val progress = totalBytesRead.toFloat() / contentLength.toFloat()
-                            emit(DownloadState.Downloading(progress))
-                        }
+                    if (contentLength > 0) {
+                        val progress = totalBytesRead.toFloat() / contentLength.toFloat()
+                        send(DownloadState.Downloading(progress))
                     }
                 }
             }
 
-            emit(DownloadState.Completed)
+            send(DownloadState.Completed)
         } catch (e: Exception) {
-            emit(DownloadState.Failed(e.message ?: "Download failed"))
+            send(DownloadState.Failed(e.message ?: "Download failed"))
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     actual fun getLocalFilePath(episodeId: String): String? {
         val downloadDir = getDownloadDirectory()

@@ -18,9 +18,14 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -41,6 +46,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.download.DownloadState
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
@@ -72,11 +78,14 @@ fun PodcastDetailScreen(
                 isSubscribed = uiState.isSubscribed,
                 isLoading = uiState.isLoading,
                 isSubscriptionLoading = uiState.isSubscriptionLoading,
+                downloadStates = uiState.downloadStates,
             ),
             actions = PodcastDetailActions(
                 onNavigateBack = onNavigateBack,
                 onSubscribe = { viewModel.toggleSubscription() },
                 onPlayEpisode = { episodeId -> viewModel.playEpisode(episodeId) },
+                onDownloadEpisode = { episodeId -> viewModel.downloadEpisode(episodeId) },
+                onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
             ),
         )
 
@@ -93,12 +102,15 @@ private data class PodcastDetailState(
     val isSubscribed: Boolean,
     val isLoading: Boolean = false,
     val isSubscriptionLoading: Boolean = false,
+    val downloadStates: Map<String, DownloadState> = emptyMap(),
 )
 
 private data class PodcastDetailActions(
     val onNavigateBack: () -> Unit,
     val onSubscribe: () -> Unit,
     val onPlayEpisode: (String) -> Unit,
+    val onDownloadEpisode: (String) -> Unit,
+    val onDeleteDownload: (String) -> Unit,
 )
 
 @Composable
@@ -142,7 +154,10 @@ private fun PodcastDetailScreenContent(state: PodcastDetailState, actions: Podca
         EpisodesSection(
             episodes = state.episodes,
             isLoading = state.isLoading,
+            downloadStates = state.downloadStates,
             onPlayEpisode = actions.onPlayEpisode,
+            onDownloadEpisode = actions.onDownloadEpisode,
+            onDeleteDownload = actions.onDeleteDownload,
         )
     }
 }
@@ -224,7 +239,14 @@ private fun PodcastInfoSection(
 }
 
 @Composable
-private fun EpisodesSection(episodes: List<EpisodeDisplayModel>, isLoading: Boolean, onPlayEpisode: (String) -> Unit) {
+private fun EpisodesSection(
+    episodes: List<EpisodeDisplayModel>,
+    isLoading: Boolean,
+    downloadStates: Map<String, DownloadState>,
+    onPlayEpisode: (String) -> Unit,
+    onDownloadEpisode: (String) -> Unit,
+    onDeleteDownload: (String) -> Unit,
+) {
     Column {
         Text(
             text = "Episodes",
@@ -248,7 +270,10 @@ private fun EpisodesSection(episodes: List<EpisodeDisplayModel>, isLoading: Bool
                 items(episodes) { episode ->
                     EpisodeItem(
                         episode = episode,
+                        downloadState = downloadStates[episode.id],
                         onPlay = { onPlayEpisode(episode.id) },
+                        onDownload = { onDownloadEpisode(episode.id) },
+                        onDeleteDownload = { onDeleteDownload(episode.id) },
                     )
                 }
             }
@@ -257,7 +282,13 @@ private fun EpisodesSection(episodes: List<EpisodeDisplayModel>, isLoading: Bool
 }
 
 @Composable
-private fun EpisodeItem(episode: EpisodeDisplayModel, onPlay: () -> Unit) {
+private fun EpisodeItem(
+    episode: EpisodeDisplayModel,
+    downloadState: DownloadState?,
+    onPlay: () -> Unit,
+    onDownload: () -> Unit,
+    onDeleteDownload: () -> Unit,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
@@ -296,9 +327,75 @@ private fun EpisodeItem(episode: EpisodeDisplayModel, onPlay: () -> Unit) {
                     )
                 }
 
-                Button(onClick = onPlay) {
-                    Text("▶")
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Download button
+                    DownloadButton(
+                        isDownloaded = episode.isDownloaded,
+                        downloadState = downloadState,
+                        onDownload = onDownload,
+                        onDeleteDownload = onDeleteDownload,
+                    )
+
+                    Button(onClick = onPlay) {
+                        Text("▶")
+                    }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DownloadButton(
+    isDownloaded: Boolean,
+    downloadState: DownloadState?,
+    onDownload: () -> Unit,
+    onDeleteDownload: () -> Unit,
+) {
+    when {
+        downloadState is DownloadState.Downloading -> {
+            // Show progress indicator
+            Box(
+                modifier = Modifier.size(48.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (downloadState.progress > 0f) {
+                    // Determinate progress
+                    CircularProgressIndicator(
+                        progress = { downloadState.progress },
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                    )
+                } else {
+                    // Indeterminate progress (when progress is 0 or unknown)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                    )
+                }
+            }
+        }
+        isDownloaded -> {
+            // Show delete button
+            IconButton(onClick = onDeleteDownload) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete download",
+                    tint = MaterialTheme.colorScheme.error,
+                )
+            }
+        }
+        else -> {
+            // Show download button
+            IconButton(onClick = onDownload) {
+                Icon(
+                    imageVector = Icons.Default.Download,
+                    contentDescription = "Download episode",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }

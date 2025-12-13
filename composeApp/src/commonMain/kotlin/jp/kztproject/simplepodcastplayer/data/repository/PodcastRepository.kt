@@ -6,6 +6,7 @@ import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.datetime.Clock
 
 class PodcastRepository {
@@ -69,4 +70,23 @@ class PodcastRepository {
      * Get podcast by ID
      */
     suspend fun getPodcast(podcastId: Long): PodcastEntity? = podcastDao.getById(podcastId)
+
+    /**
+     * Get episodes by podcast ID (for offline access)
+     */
+    suspend fun getEpisodesByPodcastId(podcastId: String): List<Episode> {
+        val entities = episodeDao.getByPodcastId(podcastId).first()
+        return entities.map { entity ->
+            Episode(
+                id = entity.id,
+                podcastId = entity.podcastId,
+                title = entity.title,
+                description = entity.description,
+                audioUrl = entity.audioUrl,
+                duration = entity.duration,
+                publishedAt = entity.publishedAt,
+                listened = entity.listened,
+            )
+        }
+    }
 }

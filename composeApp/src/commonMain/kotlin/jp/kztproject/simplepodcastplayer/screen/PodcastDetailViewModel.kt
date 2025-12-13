@@ -2,15 +2,19 @@ package jp.kztproject.simplepodcastplayer.screen
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.aakira.napier.Napier
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.RssService
+import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepositoryBuilder
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
+import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.util.toDisplayModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> }) : ViewModel() {
@@ -19,6 +23,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
 
     private val rssService = RssService()
     private val podcastRepository = PodcastRepository()
+    private val downloadRepository = DownloadRepositoryBuilder.build()
     private var loadedEpisodes: List<Episode> = emptyList()
 
     fun initialize(podcast: Podcast) {
@@ -27,7 +32,6 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
             isLoading = true,
         )
         loadEpisodes(podcast)
-        checkSubscriptionStatus(podcast)
     }
 
     fun toggleSubscription() {
@@ -54,10 +58,11 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                     isSubscriptionLoading = false,
                 )
             } catch (e: Exception) {
+                Napier.e("Failed to update subscription", e)
                 _uiState.value = _uiState.value.copy(
                     isSubscribed = !newSubscriptionStatus,
                     isSubscriptionLoading = false,
-                    error = "Failed to update subscription: ${e.message}",
+                    error = "Failed to update subscription",
                 )
             }
         }
@@ -101,38 +106,16 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
     private fun loadEpisodes(podcast: Podcast) {
         viewModelScope.launch {
             try {
-                val episodes = if (podcast.feedUrl.isNullOrBlank()) {
-                    _uiState.value = _uiState.value.copy(
-                        error = "No RSS feed URL available for this podcast",
-                    )
-                    emptyList()
+                // Check if subscribed first to decide data source
+                val isSubscribed = podcastRepository.isSubscribed(podcast.trackId)
+                _uiState.value = _uiState.value.copy(isSubscribed = isSubscribed)
+
+                val episodes = if (isSubscribed) {
+                    // Subscribed: Load from database (offline support)
+                    loadEpisodesFromDatabase(podcast)
                 } else {
-                    // Fetch real episodes from RSS feed
-                    val result = rssService.fetchEpisodes(podcast.feedUrl)
-                    if (result.isSuccess) {
-                        val parsedEpisodes = result.getOrNull() ?: emptyList()
-                        // Store loaded episodes for subscription
-                        loadedEpisodes =
-                            parsedEpisodes.map { parsedEpisode ->
-                                Episode(
-                                    id = parsedEpisode.id,
-                                    podcastId = podcast.trackId.toString(),
-                                    title = parsedEpisode.title,
-                                    description = parsedEpisode.description,
-                                    audioUrl = parsedEpisode.audioUrl,
-                                    duration = parsedEpisode.duration,
-                                    publishedAt = parsedEpisode.publishedAt,
-                                    listened = false,
-                                )
-                            }
-                        parsedEpisodes.map { it.toDisplayModel() }
-                    } else {
-                        val error = result.exceptionOrNull()
-                        _uiState.value = _uiState.value.copy(
-                            error = "Failed to load RSS feed: ${error?.message}",
-                        )
-                        emptyList()
-                    }
+                    // Not subscribed: Fetch from RSS feed
+                    loadEpisodesFromRss(podcast)
                 }
 
                 _uiState.value = _uiState.value.copy(
@@ -140,25 +123,152 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                     isLoading = false,
                 )
             } catch (e: Exception) {
+                Napier.e("Failed to load episodes", e)
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
-                    error = "Failed to load episodes: ${e.message}",
+                    error = "Failed to load episodes",
                 )
             }
         }
     }
 
-    private fun checkSubscriptionStatus(podcast: Podcast) {
+    private suspend fun loadEpisodesFromDatabase(podcast: Podcast): List<EpisodeDisplayModel> {
+        val episodes = podcastRepository.getEpisodesByPodcastId(podcast.trackId.toString())
+        loadedEpisodes = episodes
+        return episodes.map { episode ->
+            val isDownloaded = downloadRepository.isDownloaded(episode.id)
+            episode.toDisplayModel(isDownloaded)
+        }
+    }
+
+    private suspend fun loadEpisodesFromRss(podcast: Podcast): List<EpisodeDisplayModel> {
+        if (podcast.feedUrl.isNullOrBlank()) {
+            _uiState.value = _uiState.value.copy(
+                error = "No RSS feed URL available for this podcast",
+            )
+            return emptyList()
+        }
+
+        val result = rssService.fetchEpisodes(podcast.feedUrl)
+        if (result.isSuccess) {
+            val parsedEpisodes = result.getOrNull() ?: emptyList()
+            // Store loaded episodes for subscription
+            loadedEpisodes =
+                parsedEpisodes.map { parsedEpisode ->
+                    Episode(
+                        id = parsedEpisode.id,
+                        podcastId = podcast.trackId.toString(),
+                        title = parsedEpisode.title,
+                        description = parsedEpisode.description,
+                        audioUrl = parsedEpisode.audioUrl,
+                        duration = parsedEpisode.duration,
+                        publishedAt = parsedEpisode.publishedAt,
+                        listened = false,
+                    )
+                }
+            return parsedEpisodes.map { parsedEpisode ->
+                val isDownloaded = downloadRepository.isDownloaded(parsedEpisode.id)
+                parsedEpisode.toDisplayModel(isDownloaded)
+            }
+        } else {
+            val error = result.exceptionOrNull()
+            Napier.e("Failed to load RSS feed", error)
+            _uiState.value = _uiState.value.copy(
+                error = "Failed to load RSS feed",
+            )
+            return emptyList()
+        }
+    }
+
+    fun downloadEpisode(episodeId: String) {
+        val episode = _uiState.value.episodes.find { it.id == episodeId } ?: return
+
+        // Update download state to downloading
+        _uiState.update { currentState ->
+            val updatedDownloadStates = currentState.downloadStates.toMutableMap()
+            updatedDownloadStates[episodeId] = DownloadState.Downloading(0f)
+            currentState.copy(downloadStates = updatedDownloadStates)
+        }
+
         viewModelScope.launch {
             try {
-                // Check subscription status from database
-                val isSubscribed = podcastRepository.isSubscribed(podcast.trackId)
+                downloadRepository.downloadEpisode(episodeId, episode.audioUrl).collect { state ->
+                    Napier.d("Download state update: $state")
 
-                _uiState.value = _uiState.value.copy(
-                    isSubscribed = isSubscribed,
-                )
-            } catch (_: Exception) {
-                // Ignore subscription check errors for now
+                    _uiState.update { currentState ->
+                        val updatedDownloadStates = currentState.downloadStates.toMutableMap()
+                        updatedDownloadStates[episodeId] = state
+
+                        val updatedEpisodes = when (state) {
+                            is DownloadState.Completed -> {
+                                // Update episode's isDownloaded status
+                                currentState.episodes.map { episode ->
+                                    if (episode.id == episodeId) {
+                                        episode.copy(isDownloaded = true)
+                                    } else {
+                                        episode
+                                    }
+                                }
+                            }
+                            else -> currentState.episodes
+                        }
+
+                        val errorMessage = if (state is DownloadState.Failed) {
+                            Napier.e("Download failed: ${state.error}")
+                            "Download failed"
+                        } else {
+                            currentState.error
+                        }
+
+                        currentState.copy(
+                            downloadStates = updatedDownloadStates,
+                            episodes = updatedEpisodes,
+                            error = errorMessage,
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                Napier.e("Download failed", e)
+                _uiState.update { currentState ->
+                    val updatedDownloadStates = currentState.downloadStates.toMutableMap()
+                    updatedDownloadStates[episodeId] = DownloadState.Failed(e.message ?: "Unknown error")
+                    currentState.copy(
+                        downloadStates = updatedDownloadStates,
+                        error = "Download failed",
+                    )
+                }
+            }
+        }
+    }
+
+    fun deleteDownload(episodeId: String) {
+        viewModelScope.launch {
+            try {
+                val deleted = downloadRepository.deleteDownload(episodeId)
+                _uiState.update { currentState ->
+                    if (deleted) {
+                        val updatedDownloadStates = currentState.downloadStates.toMutableMap()
+                        updatedDownloadStates[episodeId] = DownloadState.Idle
+
+                        val updatedEpisodes = currentState.episodes.map { episode ->
+                            if (episode.id == episodeId) {
+                                episode.copy(isDownloaded = false)
+                            } else {
+                                episode
+                            }
+                        }
+
+                        currentState.copy(
+                            downloadStates = updatedDownloadStates,
+                            episodes = updatedEpisodes,
+                        )
+                    } else {
+                        currentState.copy(error = "Failed to delete download")
+                    }
+                }
+            } catch (e: Exception) {
+                Napier.e("Failed to delete download", e)
+                _uiState.update { it.copy(error = "Failed to delete download") }
             }
         }
     }
@@ -176,4 +286,5 @@ data class PodcastDetailUiState(
     val isLoading: Boolean = false,
     val isSubscriptionLoading: Boolean = false,
     val error: String? = null,
+    val downloadStates: Map<String, DownloadState> = emptyMap(),
 )

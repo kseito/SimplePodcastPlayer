@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
+import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepositoryBuilder
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -15,6 +16,7 @@ class MainActivity : ComponentActivity() {
 
         // Initialize database
         DatabaseBuilder.init(this)
+        DownloadRepositoryBuilder.init(this)
 
         setContent {
             App()

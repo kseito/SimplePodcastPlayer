@@ -1,5 +1,6 @@
 package jp.kztproject.simplepodcastplayer.data
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.plugins.HttpTimeout
@@ -40,7 +41,7 @@ class AppleSearchApiClient {
         install(Logging) {
             logger = object : Logger {
                 override fun log(message: String) {
-                    println("Ktor: $message")
+                    Napier.d("Ktor: $message")
                 }
             }
             level = LogLevel.ALL // すべてのログを出力
