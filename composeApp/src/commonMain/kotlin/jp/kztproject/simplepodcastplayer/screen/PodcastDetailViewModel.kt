@@ -184,7 +184,11 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
         val episode = _uiState.value.episodes.find { it.id == episodeId } ?: return
 
         // Update download state to downloading
-        updateDownloadState(episodeId, DownloadState.Downloading(0f))
+        _uiState.update { currentState ->
+            val updatedDownloadStates = currentState.downloadStates.toMutableMap()
+            updatedDownloadStates[episodeId] = DownloadState.Downloading(0f)
+            currentState.copy(downloadStates = updatedDownloadStates)
+        }
 
         viewModelScope.launch {
             try {
@@ -219,7 +223,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                         currentState.copy(
                             downloadStates = updatedDownloadStates,
                             episodes = updatedEpisodes,
-                            error = errorMessage
+                            error = errorMessage,
                         )
                     }
                 }
@@ -230,7 +234,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                     updatedDownloadStates[episodeId] = DownloadState.Failed(e.message ?: "Unknown error")
                     currentState.copy(
                         downloadStates = updatedDownloadStates,
-                        error = "Download failed"
+                        error = "Download failed",
                     )
                 }
             }
@@ -256,7 +260,7 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
 
                         currentState.copy(
                             downloadStates = updatedDownloadStates,
-                            episodes = updatedEpisodes
+                            episodes = updatedEpisodes,
                         )
                     } else {
                         currentState.copy(error = "Failed to delete download")
@@ -267,23 +271,6 @@ class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) 
                 _uiState.update { it.copy(error = "Failed to delete download") }
             }
         }
-    }
-
-    private fun updateDownloadState(episodeId: String, state: DownloadState) {
-        val currentStates = _uiState.value.downloadStates.toMutableMap()
-        currentStates[episodeId] = state
-        _uiState.value = _uiState.value.copy(downloadStates = currentStates)
-    }
-
-    private fun updateEpisodeDownloadStatus(episodeId: String, isDownloaded: Boolean) {
-        val updatedEpisodes = _uiState.value.episodes.map { episode ->
-            if (episode.id == episodeId) {
-                episode.copy(isDownloaded = isDownloaded)
-            } else {
-                episode
-            }
-        }
-        _uiState.value = _uiState.value.copy(episodes = updatedEpisodes)
     }
 
     override fun onCleared() {

@@ -10,8 +10,8 @@ actual object DownloadRepositoryBuilder {
     }
 
     actual fun build(): DownloadRepository {
-        val appContext = context ?: throw IllegalStateException(
-            "DownloadRepositoryBuilder has not been initialized. Call init() in your Application class."
+        val appContext = context ?: error(
+            "DownloadRepositoryBuilder has not been initialized. Call init() in your Application class.",
         )
         return DownloadRepository(appContext)
     }
