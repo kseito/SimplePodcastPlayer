@@ -50,11 +50,10 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - iOS minimum deployment target: iOS 16.0
 
 ### Application Flow
-The app follows a simple navigation pattern:
-- `App.kt` sets up NavHost with two destinations: "list" and "search"
-- `PodcastListScreen` displays podcast list with navigation to search
-- `PodcastSearchScreen` provides search functionality with navigation back to list
-- Navigation is handled through lambda callbacks passed between screens
+- `App.kt` sets up a `NavHost` to manage navigation between screens. Key destinations include `list`, `search`, `detail`, `list_detail`, and `player`.
+- `PodcastListScreen` displays the podcast list and navigates to the search or detail screen.
+- `PodcastSearchScreen` provides search functionality and navigates to the detail screen.
+- Navigation is managed using a `NavController`, with state passed between composables to determine which podcast or episode to display.
 
 ### Platform-Specific Entry Points
 - **Android**: `MainActivity.kt` extends ComponentActivity and calls `App()`
@@ -96,4 +95,3 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
-IMPORTANT: Keep TODO comments in the code. TODO comments are valuable for indicating future improvements and should not be removed during refactoring or cleanup.
