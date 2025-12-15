@@ -1,6 +1,6 @@
-# CLAUDE.md
+# Gemini.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Gemini when working with code in this repository.
 
 ## Project Overview
 SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatform, targeting Android and iOS platforms. The project uses a shared UI approach where most code is in the `commonMain` source set.
@@ -95,4 +95,3 @@ NEVER create files unless they're absolutely necessary for achieving your goal.
 ALWAYS prefer editing an existing file to creating a new one.
 NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.
 Only use emojis if the user explicitly requests it. Avoid writing emojis to files unless asked.
-IMPORTANT: Keep TODO comments in the code. TODO comments are valuable for indicating future improvements and should not be removed during refactoring or cleanup.
