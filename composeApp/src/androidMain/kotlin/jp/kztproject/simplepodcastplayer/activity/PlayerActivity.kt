@@ -15,13 +15,19 @@ import androidx.compose.runtime.setValue
 import androidx.media3.exoplayer.ExoPlayer
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.screen.PlayerScreen
 import jp.kztproject.simplepodcastplayer.screen.PlayerViewModelImpl
 import jp.kztproject.simplepodcastplayer.service.PlaybackService
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.koin.core.component.KoinComponent
+import org.koin.core.component.inject
 
-class PlayerActivity : ComponentActivity() {
+class PlayerActivity : ComponentActivity(), KoinComponent {
+    private val playbackRepository: PlaybackRepository by inject()
+    private val downloadRepository: DownloadRepository by inject()
     private var playbackService: PlaybackService? = null
     private var viewModel by mutableStateOf<PlayerViewModelImpl?>(null)
     private var isBound = false
@@ -71,7 +77,7 @@ class PlayerActivity : ComponentActivity() {
             val episode = Json.decodeFromString<Episode>(episodeJson)
             val podcast = Json.decodeFromString<Podcast>(podcastJson)
 
-            viewModel = PlayerViewModelImpl(exoPlayer, context)
+            viewModel = PlayerViewModelImpl(exoPlayer, context, playbackRepository, downloadRepository)
             viewModel?.loadEpisode(episode, podcast)
         }
     }

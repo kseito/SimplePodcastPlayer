@@ -10,11 +10,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class PodcastListViewModel : ViewModel() {
+class PodcastListViewModel(private val podcastRepository: PodcastRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(PodcastListUiState())
     val uiState: StateFlow<PodcastListUiState> = _uiState.asStateFlow()
-
-    private val podcastRepository = PodcastRepository()
 
     init {
         loadSubscribedPodcasts()

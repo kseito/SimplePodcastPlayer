@@ -36,16 +36,16 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun PodcastSearchScreen(
     onNavigateToList: () -> Unit,
     onNavigateToDetail: (Podcast) -> Unit,
-    viewModel: PodcastSearchViewModel = viewModel { PodcastSearchViewModel() },
+    viewModel: PodcastSearchViewModel = koinViewModel(),
 ) {
     val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()

@@ -11,8 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class PodcastSearchViewModel : ViewModel() {
-    private val apiClient = AppleSearchApiClient()
+class PodcastSearchViewModel(private val apiClient: AppleSearchApiClient) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
