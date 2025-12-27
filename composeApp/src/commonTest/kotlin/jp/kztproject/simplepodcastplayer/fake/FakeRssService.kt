@@ -1,8 +1,9 @@
 package jp.kztproject.simplepodcastplayer.fake
 
+import jp.kztproject.simplepodcastplayer.data.IRssService
 import jp.kztproject.simplepodcastplayer.data.ParsedEpisode
 
-class FakeRssService {
+class FakeRssService : IRssService {
     private var episodes: List<ParsedEpisode> = emptyList()
     private var shouldReturnError = false
     private var errorToReturn: Exception? = null
@@ -22,7 +23,7 @@ class FakeRssService {
         errorToReturn = null
     }
 
-    suspend fun fetchEpisodes(feedUrl: String): Result<List<ParsedEpisode>> {
+    override suspend fun fetchEpisodes(feedUrl: String): Result<List<ParsedEpisode>> {
         if (feedUrl.isBlank()) {
             return Result.failure(IllegalArgumentException("Feed URL is empty"))
         }
@@ -34,7 +35,7 @@ class FakeRssService {
         }
     }
 
-    fun close() {
+    override fun close() {
         // No-op for fake
     }
 }

@@ -1,10 +1,11 @@
 package jp.kztproject.simplepodcastplayer.fake
 
+import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
-class FakeDownloadRepository {
+class FakeDownloadRepository : IDownloadRepository {
     private val downloadedEpisodes = mutableMapOf<String, String>()
     private var shouldFailDownload = false
     private var downloadError: String = "Download failed"
@@ -22,7 +23,7 @@ class FakeDownloadRepository {
         downloadedEpisodes.clear()
     }
 
-    suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> = flow {
+    override suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> = flow {
         emit(DownloadState.Idle)
 
         if (shouldFailDownload) {
@@ -38,15 +39,15 @@ class FakeDownloadRepository {
         emit(DownloadState.Completed)
     }
 
-    suspend fun deleteDownload(episodeId: String): Boolean {
+    override suspend fun deleteDownload(episodeId: String): Boolean {
         return downloadedEpisodes.remove(episodeId) != null
     }
 
-    fun getLocalFilePath(episodeId: String): String? {
+    override fun getLocalFilePath(episodeId: String): String? {
         return downloadedEpisodes[episodeId]
     }
 
-    fun isDownloaded(episodeId: String): Boolean {
+    override fun isDownloaded(episodeId: String): Boolean {
         return downloadedEpisodes.containsKey(episodeId)
     }
 }

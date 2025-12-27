@@ -1,9 +1,10 @@
 package jp.kztproject.simplepodcastplayer.fake
 
+import jp.kztproject.simplepodcastplayer.data.IAppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.PodcastSearchResponse
 
-class FakeAppleSearchApiClient {
+class FakeAppleSearchApiClient : IAppleSearchApiClient {
     private var searchResult: PodcastSearchResponse = PodcastSearchResponse(
         resultCount = 0,
         results = emptyList(),
@@ -28,14 +29,14 @@ class FakeAppleSearchApiClient {
         errorToThrow = null
     }
 
-    suspend fun searchPodcasts(term: String, limit: Int = 30, country: String = "US"): PodcastSearchResponse {
+    override suspend fun searchPodcasts(term: String, limit: Int, country: String): PodcastSearchResponse {
         if (shouldThrowError) {
             throw errorToThrow ?: Exception("Unknown error")
         }
         return searchResult
     }
 
-    fun close() {
+    override fun close() {
         // No-op for fake
     }
 }

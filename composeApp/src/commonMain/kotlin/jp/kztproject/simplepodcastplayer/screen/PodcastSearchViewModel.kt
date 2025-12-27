@@ -3,7 +3,7 @@ package jp.kztproject.simplepodcastplayer.screen
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.aakira.napier.Napier
-import jp.kztproject.simplepodcastplayer.data.AppleSearchApiClient
+import jp.kztproject.simplepodcastplayer.data.IAppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class PodcastSearchViewModel(private val apiClient: AppleSearchApiClient) : ViewModel() {
+class PodcastSearchViewModel(private val apiClient: IAppleSearchApiClient) : ViewModel() {
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
