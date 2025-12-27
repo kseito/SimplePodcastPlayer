@@ -1,15 +1,13 @@
 package jp.kztproject.simplepodcastplayer.data.repository
 
-import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
+import jp.kztproject.simplepodcastplayer.data.database.dao.EpisodeDao
+import jp.kztproject.simplepodcastplayer.data.database.dao.PlayHistoryDao
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.database.entity.PlayHistoryEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.datetime.Clock
 
-class PlaybackRepository {
-    private val database = DatabaseBuilder.build()
-    private val episodeDao = database.episodeDao()
-    private val playHistoryDao = database.playHistoryDao()
+class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHistoryDao: PlayHistoryDao) {
 
     /**
      * Save playback position for an episode

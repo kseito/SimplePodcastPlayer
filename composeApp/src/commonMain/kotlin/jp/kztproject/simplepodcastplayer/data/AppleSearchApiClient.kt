@@ -18,7 +18,7 @@ import kotlinx.serialization.json.Json
 
 // Apple Search API implementation based on documentation:
 // https://performance-partners.apple.com/search-api
-class AppleSearchApiClient {
+class AppleSearchApiClient : IAppleSearchApiClient {
     private val client = HttpClient {
         install(ContentNegotiation) {
             json(
@@ -52,7 +52,7 @@ class AppleSearchApiClient {
         const val BASE_URL = "https://itunes.apple.com/search"
     }
 
-    suspend fun searchPodcasts(term: String, limit: Int = 30, country: String = "US"): PodcastSearchResponse =
+    override suspend fun searchPodcasts(term: String, limit: Int, country: String): PodcastSearchResponse =
         client.get(BASE_URL) {
             parameter("term", term)
             parameter("country", country)
@@ -62,7 +62,7 @@ class AppleSearchApiClient {
             header(HttpHeaders.UserAgent, "SimplePodcastPlayer/1.0")
         }.body()
 
-    fun close() {
+    override fun close() {
         client.close()
     }
 }

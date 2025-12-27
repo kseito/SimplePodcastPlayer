@@ -7,12 +7,12 @@ import jp.kztproject.simplepodcastplayer.util.RssParser
 import jp.kztproject.simplepodcastplayer.util.toEpisodes
 
 // TODO: Move to the infrastructure layer
-class RssService {
+class RssService : IRssService {
     private val httpClient = HttpClient()
     private val rssParser = RssParser()
 
     @Suppress("ReturnCount")
-    suspend fun fetchEpisodes(feedUrl: String): Result<List<ParsedEpisode>> {
+    override suspend fun fetchEpisodes(feedUrl: String): Result<List<ParsedEpisode>> {
         return try {
             if (feedUrl.isBlank()) {
                 return Result.failure(IllegalArgumentException("Feed URL is empty"))
@@ -41,7 +41,7 @@ class RssService {
         }
     }
 
-    fun close() {
+    override fun close() {
         httpClient.close()
     }
 }

@@ -6,8 +6,8 @@ import io.github.aakira.napier.Napier
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.RssService
-import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepositoryBuilder
+import jp.kztproject.simplepodcastplayer.data.IRssService
+import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.util.toDisplayModel
@@ -17,13 +17,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class PodcastDetailViewModel(private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> }) : ViewModel() {
+class PodcastDetailViewModel(
+    private val rssService: IRssService,
+    private val podcastRepository: PodcastRepository,
+    private val downloadRepository: IDownloadRepository,
+    private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> },
+) : ViewModel() {
     private val _uiState = MutableStateFlow(PodcastDetailUiState())
     val uiState: StateFlow<PodcastDetailUiState> = _uiState.asStateFlow()
 
-    private val rssService = RssService()
-    private val podcastRepository = PodcastRepository()
-    private val downloadRepository = DownloadRepositoryBuilder.build()
     private var loadedEpisodes: List<Episode> = emptyList()
 
     fun initialize(podcast: Podcast) {
