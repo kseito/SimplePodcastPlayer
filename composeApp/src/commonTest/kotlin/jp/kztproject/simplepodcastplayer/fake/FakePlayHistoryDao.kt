@@ -20,8 +20,7 @@ class FakePlayHistoryDao : PlayHistoryDao {
             allHistories.filter { it.episodeId == episodeId }.sortedByDescending { it.playedAt }
         }
 
-    override fun getRecent(limit: Int): Flow<List<PlayHistoryEntity>> =
-        playHistoriesFlow.map { allHistories ->
-            allHistories.sortedByDescending { it.playedAt }.take(limit)
-        }
+    override fun getRecent(limit: Int): Flow<List<PlayHistoryEntity>> = playHistoriesFlow.map { allHistories ->
+        allHistories.sortedByDescending { it.playedAt }.take(limit)
+    }
 }

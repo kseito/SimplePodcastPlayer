@@ -24,13 +24,11 @@ class FakeEpisodeDao : EpisodeDao {
         }
     }
 
-    override suspend fun getById(episodeId: String): EpisodeEntity? =
-        episodes.find { it.id == episodeId }
+    override suspend fun getById(episodeId: String): EpisodeEntity? = episodes.find { it.id == episodeId }
 
-    override fun getByPodcastId(podcastId: String): Flow<List<EpisodeEntity>> =
-        episodesFlow.map { allEpisodes ->
-            allEpisodes.filter { it.podcastId == podcastId }.sortedByDescending { it.publishedAt }
-        }
+    override fun getByPodcastId(podcastId: String): Flow<List<EpisodeEntity>> = episodesFlow.map { allEpisodes ->
+        allEpisodes.filter { it.podcastId == podcastId }.sortedByDescending { it.publishedAt }
+    }
 
     override suspend fun updateListenedStatus(episodeId: String, listened: Boolean) {
         val index = episodes.indexOfFirst { it.id == episodeId }
@@ -65,10 +63,9 @@ class FakeEpisodeDao : EpisodeDao {
         }
     }
 
-    override fun getDownloadedEpisodes(): Flow<List<EpisodeEntity>> =
-        episodesFlow.map { allEpisodes ->
-            allEpisodes.filter { it.isDownloaded }
-        }
+    override fun getDownloadedEpisodes(): Flow<List<EpisodeEntity>> = episodesFlow.map { allEpisodes ->
+        allEpisodes.filter { it.isDownloaded }
+    }
 
     override suspend fun delete(episodeId: String) {
         episodes.removeAll { it.id == episodeId }

@@ -39,15 +39,9 @@ class FakeDownloadRepository : IDownloadRepository {
         emit(DownloadState.Completed)
     }
 
-    override suspend fun deleteDownload(episodeId: String): Boolean {
-        return downloadedEpisodes.remove(episodeId) != null
-    }
+    override suspend fun deleteDownload(episodeId: String): Boolean = downloadedEpisodes.remove(episodeId) != null
 
-    override fun getLocalFilePath(episodeId: String): String? {
-        return downloadedEpisodes[episodeId]
-    }
+    override fun getLocalFilePath(episodeId: String): String? = downloadedEpisodes[episodeId]
 
-    override fun isDownloaded(episodeId: String): Boolean {
-        return downloadedEpisodes.containsKey(episodeId)
-    }
+    override fun isDownloaded(episodeId: String): Boolean = downloadedEpisodes.containsKey(episodeId)
 }

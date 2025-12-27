@@ -25,7 +25,9 @@ import kotlinx.serialization.json.Json
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
-class PlayerActivity : ComponentActivity(), KoinComponent {
+class PlayerActivity :
+    ComponentActivity(),
+    KoinComponent {
     private val playbackRepository: PlaybackRepository by inject()
     private val downloadRepository: DownloadRepository by inject()
     private var playbackService: PlaybackService? = null

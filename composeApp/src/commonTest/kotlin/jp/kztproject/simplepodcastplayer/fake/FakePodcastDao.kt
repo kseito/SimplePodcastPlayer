@@ -25,8 +25,7 @@ class FakePodcastDao : PodcastDao {
         allPodcasts.filter { it.subscribed }.sortedByDescending { it.subscribedAt }
     }
 
-    override suspend fun getById(podcastId: Long): PodcastEntity? =
-        podcasts.find { it.id == podcastId }
+    override suspend fun getById(podcastId: Long): PodcastEntity? = podcasts.find { it.id == podcastId }
 
     override suspend fun updateSubscription(podcastId: Long, subscribed: Boolean) {
         val index = podcasts.indexOfFirst { it.id == podcastId }

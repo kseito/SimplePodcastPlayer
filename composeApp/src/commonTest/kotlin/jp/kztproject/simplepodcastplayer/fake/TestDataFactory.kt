@@ -78,11 +78,7 @@ object TestDataFactory {
         downloadedAt = if (isDownloaded) 1703001600000L else 0L, // 2024-12-15 00:00:00 UTC
     )
 
-    fun createParsedEpisode(
-        id: String = "ep1",
-        title: String = "Test Episode",
-        duration: Long = 1800L,
-    ) = ParsedEpisode(
+    fun createParsedEpisode(id: String = "ep1", title: String = "Test Episode", duration: Long = 1800L) = ParsedEpisode(
         id = id,
         title = title,
         description = "Test Description",
