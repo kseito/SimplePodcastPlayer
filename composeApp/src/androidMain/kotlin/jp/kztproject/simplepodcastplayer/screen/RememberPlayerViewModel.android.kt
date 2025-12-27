@@ -36,7 +36,7 @@ actual fun rememberPlayerViewModel(episode: Episode, podcast: Podcast): PlayerVi
 
                 binder?.getService()?.let { svc ->
                     val exoPlayer = svc.getPlayer() as ExoPlayer
-                    val vm = PlayerViewModelImpl(exoPlayer, context, playbackRepository, downloadRepository)
+                    val vm = PlayerViewModelImpl(exoPlayer, playbackRepository, downloadRepository)
                     vm.loadEpisode(episode, podcast)
                     viewModel = vm
                 }

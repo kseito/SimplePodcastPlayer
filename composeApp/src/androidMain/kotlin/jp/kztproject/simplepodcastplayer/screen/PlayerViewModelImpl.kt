@@ -1,6 +1,5 @@
 package jp.kztproject.simplepodcastplayer.screen
 
-import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
@@ -12,7 +11,6 @@ import kotlinx.coroutines.CoroutineScope
 
 class PlayerViewModelImpl(
     exoPlayer: ExoPlayer,
-    context: Context,
     playbackRepository: PlaybackRepository,
     downloadRepository: DownloadRepository,
 ) : ViewModel(),
