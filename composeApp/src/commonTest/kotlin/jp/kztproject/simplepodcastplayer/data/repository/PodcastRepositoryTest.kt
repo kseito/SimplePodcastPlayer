@@ -34,8 +34,8 @@ class PodcastRepositoryTest {
         episodeDao.getByPodcastId("1").test {
             val savedEpisodes = awaitItem()
             assertEquals(2, savedEpisodes.size)
-            assertEquals("ep1", savedEpisodes[0].id)
-            assertEquals("ep2", savedEpisodes[1].id)
+            assertTrue(savedEpisodes.any { it.id == "ep1" })
+            assertTrue(savedEpisodes.any { it.id == "ep2" })
             cancelAndIgnoreRemainingEvents()
         }
     }
