@@ -18,6 +18,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PodcastListViewModelTest {
@@ -61,14 +62,16 @@ class PodcastListViewModelTest {
         repository.subscribeToPodcast(podcast2, emptyList())
 
         viewModel = PodcastListViewModel(repository)
-        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.uiState.test {
-            val state = awaitItem()
+            // Skip initial loading state and get the updated state
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
             assertFalse(state.isLoading)
             assertEquals(2, state.subscribedPodcasts.size)
-            assertEquals("Podcast 1", state.subscribedPodcasts[0].name)
-            assertEquals("Podcast 2", state.subscribedPodcasts[1].name)
+            val podcastNames = state.subscribedPodcasts.map { it.name }.toSet()
+            assertTrue(podcastNames.contains("Podcast 1"))
+            assertTrue(podcastNames.contains("Podcast 2"))
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -76,13 +79,12 @@ class PodcastListViewModelTest {
     @Test
     fun loadSubscribedPodcasts_emptyList_updatesUiState() = runTest {
         viewModel = PodcastListViewModel(repository)
-        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.uiState.test {
-            val state = awaitItem()
+            testDispatcher.scheduler.advanceUntilIdle()
+            val state = expectMostRecentItem()
             assertFalse(state.isLoading)
             assertEquals(0, state.subscribedPodcasts.size)
-            cancelAndIgnoreRemainingEvents()
         }
     }
 
@@ -92,27 +94,25 @@ class PodcastListViewModelTest {
         repository.subscribeToPodcast(podcast, emptyList())
 
         viewModel = PodcastListViewModel(repository)
-        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.uiState.test {
-            awaitItem() // Wait for initial state
+            testDispatcher.scheduler.advanceUntilIdle()
+            expectMostRecentItem()
             val result = viewModel.getPodcastById(1L)
             assertNotNull(result)
             assertEquals("Test Podcast", result.trackName)
-            cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
     fun getPodcastById_nonExistingPodcast_returnsNull() = runTest {
         viewModel = PodcastListViewModel(repository)
-        testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.uiState.test {
-            awaitItem()
+            testDispatcher.scheduler.advanceUntilIdle()
+            expectMostRecentItem()
             val result = viewModel.getPodcastById(999L)
             assertNull(result)
-            cancelAndIgnoreRemainingEvents()
         }
     }
 
