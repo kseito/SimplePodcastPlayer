@@ -125,10 +125,10 @@ class PodcastDetailViewModel : ViewModel() {
 
 // After
 class PodcastDetailViewModel(
-    private val rssService: RssService,
+    private val rssService: IRssService,
     private val podcastRepository: PodcastRepository,
-    private val downloadRepository: DownloadRepository,
-    private val navigateToPlayer: (EpisodeDisplayModel) -> Unit
+    private val downloadRepository: IDownloadRepository,
+    private val onNavigateToPlayer: (Episode, Podcast) -> Unit
 ) : ViewModel()
 ```
 
