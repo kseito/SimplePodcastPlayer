@@ -13,6 +13,7 @@ import jp.kztproject.simplepodcastplayer.di.appModule
 import jp.kztproject.simplepodcastplayer.screen.PlayerScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastDetailScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastListScreen
+import jp.kztproject.simplepodcastplayer.screen.PodcastListViewModel
 import jp.kztproject.simplepodcastplayer.screen.PodcastSearchScreen
 import jp.kztproject.simplepodcastplayer.screen.rememberPlayerViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
@@ -69,8 +70,7 @@ fun App() {
                     // We need to get the podcast from the database using selectedPodcastId
                     selectedPodcastId.value?.let { podcastId ->
                         // Get the podcast from the view model
-                        val listViewModel: jp.kztproject.simplepodcastplayer.screen.PodcastListViewModel =
-                            koinViewModel()
+                        val listViewModel: PodcastListViewModel = koinViewModel()
                         listViewModel.getPodcastById(podcastId)?.let { podcast ->
                             PodcastDetailScreen(
                                 podcast = podcast,
