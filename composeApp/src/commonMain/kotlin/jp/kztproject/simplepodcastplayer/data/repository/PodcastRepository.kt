@@ -2,17 +2,15 @@ package jp.kztproject.simplepodcastplayer.data.repository
 
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
+import jp.kztproject.simplepodcastplayer.data.database.dao.EpisodeDao
+import jp.kztproject.simplepodcastplayer.data.database.dao.PodcastDao
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.Clock
 
-class PodcastRepository {
-    private val database = DatabaseBuilder.build()
-    private val podcastDao = database.podcastDao()
-    private val episodeDao = database.episodeDao()
+class PodcastRepository(private val podcastDao: PodcastDao, private val episodeDao: EpisodeDao) {
 
     /**
      * Subscribe to a podcast and save it with its episodes

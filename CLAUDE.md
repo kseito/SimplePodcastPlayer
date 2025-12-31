@@ -60,10 +60,33 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - **iOS**: Uses `MainViewController.kt` to bridge to the shared `App()` composable
 
 ## Testing
-- Tests use kotlin-test framework
-- Run all tests: `./gradlew test`
-- Common tests are in `commonTest` source set
-- Currently has basic example test in `ComposeAppCommonTest.kt`
+
+### Unit Testing
+- **Test Framework**: kotlin-test with kotlinx-coroutines-test for async testing
+- **Test Utilities**: Turbine for Flow testing, Koin for dependency injection
+- **Run all tests**: `./gradlew test`
+- **Run specific test suite**: `./gradlew :composeApp:testDebugUnitTest`
+- **Test location**: `composeApp/src/commonTest` for shared tests
+- **Test reports**: Generated in `composeApp/build/reports/tests/`
+
+### Test Coverage
+Current test coverage includes:
+- **Utilities**: RssParser, EpisodeUtils
+- **Repositories**: PodcastRepository
+- **ViewModels**: PodcastListViewModel, PodcastSearchViewModel, PodcastDetailViewModel
+- **Test Infrastructure**: Fake implementations (DAOs, API clients, services) in `fake` package
+
+### Dependency Injection for Testing
+- **DI Framework**: Koin is used for dependency injection
+- **Test Doubles**: Fake implementations provided for repositories, DAOs, and API clients
+- **Test Data**: `TestDataFactory` provides consistent test data generation
+- All production classes accept dependencies via constructor injection for testability
+
+### CI/CD Testing
+- **GitHub Actions**: Unit tests run automatically on every PR and push to main
+- **Workflow**: `.github/workflows/unit-tests.yml`
+- **Test Reports**: Uploaded as artifacts (14-day retention)
+- See `document/unit-test-implementation-plan.md` for detailed testing strategy
 
 ## Code Organization
 - Package structure: `jp.kztproject.simplepodcastplayer`
@@ -72,11 +95,23 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - Shared resources in `composeApp/src/commonMain/composeResources`
 
 ## Code Quality and CI/CD
-- **Detekt** is configured for static code analysis across all source sets
-- GitHub Actions workflow runs Detekt on every PR and push to main
-- Configuration file: `detekt-config.yml` with Compose-specific rules
-- HTML and XML reports are generated and uploaded as artifacts
-- Detekt analyzes `commonMain`, `androidMain`, and `iosMain` source sets
+
+### Automated Checks
+GitHub Actions workflows run automatically on every PR and push to main:
+
+- **Unit Tests** (`.github/workflows/unit-tests.yml`):
+  - Runs all unit tests with `./gradlew test`
+  - Uploads test reports as artifacts
+
+- **Detekt** (`.github/workflows/detekt.yml`):
+  - Static code analysis across all source sets
+  - Configuration: `detekt-config.yml` with Compose-specific rules
+  - Analyzes `commonMain`, `androidMain`, and `iosMain` source sets
+  - Uploads HTML and XML reports as artifacts
+
+- **Code Formatting** (`.github/workflows/ktlint-spotless.yml`):
+  - Checks and applies Spotless formatting
+  - Provides automated suggestions via reviewdog
 
 ## Code Style Guidelines
 

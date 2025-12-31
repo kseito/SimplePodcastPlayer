@@ -9,7 +9,7 @@ actual object DownloadRepositoryBuilder {
         this.context = context.applicationContext
     }
 
-    actual fun build(): DownloadRepository {
+    actual fun build(): IDownloadRepository {
         val appContext = context ?: error(
             "DownloadRepositoryBuilder has not been initialized. Call init() in your Application class.",
         )

@@ -1,5 +1,5 @@
 package jp.kztproject.simplepodcastplayer.data.repository
 
 actual object DownloadRepositoryBuilder {
-    actual fun build(): DownloadRepository = DownloadRepository()
+    actual fun build(): IDownloadRepository = DownloadRepository()
 }

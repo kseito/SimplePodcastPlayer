@@ -7,12 +7,12 @@ import jp.kztproject.simplepodcastplayer.download.DownloadState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 
-actual class DownloadRepository(context: Context) {
+actual class DownloadRepository(context: Context) : IDownloadRepository {
     private val audioDownloader = AudioDownloader(context)
     private val database = DatabaseBuilder.build()
     private val episodeDao = database.episodeDao()
 
-    actual suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> =
+    actual override suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> =
         audioDownloader.downloadAudio(audioUrl, episodeId).onEach { state ->
             if (state is DownloadState.Completed) {
                 val localFilePath = audioDownloader.getLocalFilePath(episodeId)
@@ -25,7 +25,7 @@ actual class DownloadRepository(context: Context) {
             }
         }
 
-    actual suspend fun deleteDownload(episodeId: String): Boolean {
+    actual override suspend fun deleteDownload(episodeId: String): Boolean {
         val deleted = audioDownloader.deleteDownload(episodeId)
         if (deleted) {
             episodeDao.updateDownloadStatus(
@@ -38,7 +38,7 @@ actual class DownloadRepository(context: Context) {
         return deleted
     }
 
-    actual fun getLocalFilePath(episodeId: String): String? = audioDownloader.getLocalFilePath(episodeId)
+    actual override fun getLocalFilePath(episodeId: String): String? = audioDownloader.getLocalFilePath(episodeId)
 
-    actual fun isDownloaded(episodeId: String): Boolean = audioDownloader.isDownloaded(episodeId)
+    actual override fun isDownloaded(episodeId: String): Boolean = audioDownloader.isDownloaded(episodeId)
 }

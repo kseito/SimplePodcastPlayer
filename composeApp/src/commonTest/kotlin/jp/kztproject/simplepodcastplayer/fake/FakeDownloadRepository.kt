@@ -1,0 +1,47 @@
+package jp.kztproject.simplepodcastplayer.fake
+
+import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
+import jp.kztproject.simplepodcastplayer.download.DownloadState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+
+class FakeDownloadRepository : IDownloadRepository {
+    private val downloadedEpisodes = mutableMapOf<String, String>()
+    private var shouldFailDownload = false
+    private var downloadError: String = "Download failed"
+
+    fun setDownloadedEpisode(episodeId: String, localPath: String) {
+        downloadedEpisodes[episodeId] = localPath
+    }
+
+    fun setShouldFailDownload(shouldFail: Boolean, error: String = "Download failed") {
+        shouldFailDownload = shouldFail
+        downloadError = error
+    }
+
+    fun clearDownloads() {
+        downloadedEpisodes.clear()
+    }
+
+    override suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> = flow {
+        emit(DownloadState.Idle)
+
+        if (shouldFailDownload) {
+            emit(DownloadState.Failed(downloadError))
+            return@flow
+        }
+
+        emit(DownloadState.Downloading(0.5f))
+        emit(DownloadState.Downloading(1.0f))
+
+        val localPath = "/fake/path/$episodeId.mp3"
+        downloadedEpisodes[episodeId] = localPath
+        emit(DownloadState.Completed)
+    }
+
+    override suspend fun deleteDownload(episodeId: String): Boolean = downloadedEpisodes.remove(episodeId) != null
+
+    override fun getLocalFilePath(episodeId: String): String? = downloadedEpisodes[episodeId]
+
+    override fun isDownloaded(episodeId: String): Boolean = downloadedEpisodes.containsKey(episodeId)
+}

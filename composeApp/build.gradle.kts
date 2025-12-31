@@ -67,11 +67,17 @@ kotlin {
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
             implementation(libs.napier)
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+            implementation(libs.koin.compose.viewmodel)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
             implementation(libs.kotest.framework.engine)
             implementation(libs.kotest.assertions.core)
+            implementation(libs.koin.test)
+            implementation(libs.kotlinx.coroutines.test)
+            implementation(libs.turbine)
         }
     }
 }
