@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
-import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
 import kotlinx.coroutines.CoroutineScope
@@ -12,7 +12,7 @@ import kotlinx.coroutines.CoroutineScope
 class PlayerViewModelImpl(
     exoPlayer: ExoPlayer,
     playbackRepository: PlaybackRepository,
-    downloadRepository: DownloadRepository,
+    downloadRepository: IDownloadRepository,
 ) : ViewModel(),
     PlayerViewModel {
     private val delegate =

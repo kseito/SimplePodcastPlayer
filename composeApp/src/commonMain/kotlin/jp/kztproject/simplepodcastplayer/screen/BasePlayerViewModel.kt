@@ -3,7 +3,7 @@ package jp.kztproject.simplepodcastplayer.screen
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
-import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
 import kotlinx.coroutines.CoroutineScope
@@ -22,7 +22,7 @@ abstract class BasePlayerViewModel : PlayerViewModel {
 
     internal abstract val audioPlayer: AudioPlayer
     internal abstract val playbackRepository: PlaybackRepository
-    internal abstract val downloadRepository: DownloadRepository
+    internal abstract val downloadRepository: IDownloadRepository
     internal abstract val coroutineScope: CoroutineScope
 
     internal var positionUpdateJob: Job? = null
