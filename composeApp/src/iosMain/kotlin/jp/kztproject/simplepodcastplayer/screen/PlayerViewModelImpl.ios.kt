@@ -2,7 +2,6 @@ package jp.kztproject.simplepodcastplayer.screen
 
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer

@@ -55,11 +55,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 
 @Composable
-fun PodcastDetailScreen(
-    podcast: Podcast,
-    onNavigateBack: () -> Unit,
-    onNavigateToPlayer: (Episode, Podcast) -> Unit,
-) {
+fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigateToPlayer: (Episode, Podcast) -> Unit) {
     val rssService: IRssService = koinInject()
     val podcastRepository: PodcastRepository = koinInject()
     val downloadRepository: IDownloadRepository = koinInject()

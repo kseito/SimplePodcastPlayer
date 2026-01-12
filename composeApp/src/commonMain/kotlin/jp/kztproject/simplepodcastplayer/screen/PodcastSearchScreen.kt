@@ -44,10 +44,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 
 @Composable
-fun PodcastSearchScreen(
-    onNavigateToList: () -> Unit,
-    onNavigateToDetail: (Podcast) -> Unit,
-) {
+fun PodcastSearchScreen(onNavigateToList: () -> Unit, onNavigateToDetail: (Podcast) -> Unit) {
     val apiClient: IAppleSearchApiClient = koinInject()
     val viewModel: PodcastSearchViewModel = viewModel { PodcastSearchViewModel(apiClient) }
     val podcasts by viewModel.podcasts.collectAsStateWithLifecycle()
