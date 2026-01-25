@@ -16,9 +16,11 @@ import jp.kztproject.simplepodcastplayer.screen.PodcastListScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastListViewModel
 import jp.kztproject.simplepodcastplayer.screen.PodcastSearchScreen
 import jp.kztproject.simplepodcastplayer.screen.rememberPlayerViewModel
+import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinApplication
-import org.koin.compose.viewmodel.koinViewModel
+import org.koin.compose.koinInject
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 @Preview
@@ -70,7 +72,8 @@ fun App() {
                     // We need to get the podcast from the database using selectedPodcastId
                     selectedPodcastId.value?.let { podcastId ->
                         // Get the podcast from the view model
-                        val listViewModel: PodcastListViewModel = koinViewModel()
+                        val podcastRepository: PodcastRepository = koinInject()
+                        val listViewModel: PodcastListViewModel = viewModel { PodcastListViewModel(podcastRepository) }
                         listViewModel.getPodcastById(podcastId)?.let { podcast ->
                             PodcastDetailScreen(
                                 podcast = podcast,
