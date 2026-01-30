@@ -160,6 +160,7 @@ private fun PodcastSearchScreenContent(
                     }
                 }
             }
+
             podcasts.isNotEmpty() -> {
                 LazyColumn {
                     items(podcasts) { podcast ->
@@ -171,6 +172,7 @@ private fun PodcastSearchScreenContent(
                     }
                 }
             }
+
             else -> {
                 Text(
                     text = "No podcasts found. Try searching for a topic or podcast name.",

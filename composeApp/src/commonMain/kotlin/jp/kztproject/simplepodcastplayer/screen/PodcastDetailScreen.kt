@@ -389,6 +389,7 @@ private fun DownloadButton(
                 }
             }
         }
+
         isDownloaded -> {
             // Show delete button
             IconButton(onClick = onDeleteDownload) {
@@ -399,6 +400,7 @@ private fun DownloadButton(
                 )
             }
         }
+
         else -> {
             // Show download button
             IconButton(onClick = onDownload) {

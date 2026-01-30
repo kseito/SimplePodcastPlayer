@@ -212,6 +212,7 @@ class PodcastDetailViewModel(
                                     }
                                 }
                             }
+
                             else -> currentState.episodes
                         }
 

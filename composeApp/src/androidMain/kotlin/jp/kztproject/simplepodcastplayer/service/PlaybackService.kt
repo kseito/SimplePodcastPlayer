@@ -68,6 +68,7 @@ class PlaybackService : MediaSessionService() {
                                 startForegroundService()
                             }
                         }
+
                         Player.STATE_IDLE, Player.STATE_ENDED -> {
                             stopForeground(STOP_FOREGROUND_REMOVE)
                         }

@@ -169,6 +169,7 @@ private fun parseItunesDuration(duration: String): Long = try {
                 val seconds = parts[1].toLongOrNull() ?: 0
                 minutes * SECONDS_PER_MINUTE + seconds
             }
+
             TIME_PARTS_HMS -> {
                 // HH:MM:SS format
                 val hours = parts[0].toLongOrNull() ?: 0
@@ -176,6 +177,7 @@ private fun parseItunesDuration(duration: String): Long = try {
                 val seconds = parts[2].toLongOrNull() ?: 0
                 hours * SECONDS_PER_HOUR + minutes * SECONDS_PER_MINUTE + seconds
             }
+
             else -> 0
         }
     } else {
