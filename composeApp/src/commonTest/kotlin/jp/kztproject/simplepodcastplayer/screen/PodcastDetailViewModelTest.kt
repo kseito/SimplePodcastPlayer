@@ -3,11 +3,13 @@ package jp.kztproject.simplepodcastplayer.screen
 import app.cash.turbine.test
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.data.PodcastLookupResponse
+import jp.kztproject.simplepodcastplayer.data.PodcastLookupResult
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
+import jp.kztproject.simplepodcastplayer.fake.FakeAppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.fake.FakeDownloadRepository
 import jp.kztproject.simplepodcastplayer.fake.FakeEpisodeDao
 import jp.kztproject.simplepodcastplayer.fake.FakePodcastDao
-import jp.kztproject.simplepodcastplayer.fake.FakeRssService
 import jp.kztproject.simplepodcastplayer.fake.TestDataFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -30,8 +32,8 @@ class PodcastDetailViewModelTest {
     private lateinit var podcastDao: FakePodcastDao
     private lateinit var episodeDao: FakeEpisodeDao
     private lateinit var repository: PodcastRepository
-    private lateinit var rssService: FakeRssService
     private lateinit var downloadRepository: FakeDownloadRepository
+    private lateinit var appleApiClient: FakeAppleSearchApiClient
     private lateinit var viewModel: PodcastDetailViewModel
     private var navigatedEpisode: Episode? = null
     private var navigatedPodcast: Podcast? = null
@@ -42,15 +44,15 @@ class PodcastDetailViewModelTest {
         podcastDao = FakePodcastDao()
         episodeDao = FakeEpisodeDao()
         repository = PodcastRepository(podcastDao, episodeDao)
-        rssService = FakeRssService()
         downloadRepository = FakeDownloadRepository()
+        appleApiClient = FakeAppleSearchApiClient()
         navigatedEpisode = null
         navigatedPodcast = null
 
         viewModel = PodcastDetailViewModel(
-            rssService = rssService,
             podcastRepository = repository,
             downloadRepository = downloadRepository,
+            appleApiClient = appleApiClient,
             onNavigateToPlayer = { episode, podcast ->
                 navigatedEpisode = episode
                 navigatedPodcast = podcast
@@ -64,13 +66,36 @@ class PodcastDetailViewModelTest {
     }
 
     @Test
-    fun initialize_notSubscribed_loadEpisodesFromRss() = runTest {
+    fun initialize_notSubscribed_loadEpisodesFromAppleApi() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
-        val parsedEpisodes = listOf(
-            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
-            TestDataFactory.createParsedEpisode(id = "ep2", title = "Episode 2"),
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Episode 1",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Test Description 1",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1002L,
+                trackName = "Episode 2",
+                episodeGuid = "ep2",
+                releaseDate = "2024-12-16T10:00:00Z",
+                trackTimeMillis = 2400000L,
+                description = "Test Description 2",
+                episodeUrl = "https://example.com/episode2.mp3",
+            ),
         )
-        rssService.setEpisodes(parsedEpisodes)
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(
+                resultCount = lookupResults.size,
+                results = lookupResults,
+            ),
+        )
 
         viewModel.initialize(podcast)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -80,8 +105,8 @@ class PodcastDetailViewModelTest {
             assertFalse(state.isSubscribed)
             assertFalse(state.isLoading)
             assertEquals(2, state.episodes.size)
-            assertEquals("Episode 1", state.episodes[0].title)
-            assertEquals("Episode 2", state.episodes[1].title)
+            assertEquals("Episode 2", state.episodes[0].title) // Sorted by trackId DESC
+            assertEquals("Episode 1", state.episodes[1].title)
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -110,9 +135,9 @@ class PodcastDetailViewModelTest {
     }
 
     @Test
-    fun initialize_rssError_setsErrorMessage() = runTest {
+    fun initialize_appleApiError_setsErrorMessage() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
-        rssService.setError(Exception("Network error"))
+        appleApiClient.setShouldThrowError(Exception("Network error"))
 
         viewModel.initialize(podcast)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -129,10 +154,24 @@ class PodcastDetailViewModelTest {
     @Test
     fun toggleSubscription_subscribe_savesDataToRepository() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
-        val parsedEpisodes = listOf(
-            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Episode 1",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Test Description",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
         )
-        rssService.setEpisodes(parsedEpisodes)
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(
+                resultCount = lookupResults.size,
+                results = lookupResults,
+            ),
+        )
 
         viewModel.initialize(podcast)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -177,10 +216,24 @@ class PodcastDetailViewModelTest {
     @Test
     fun playEpisode_navigatesToPlayer() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
-        val parsedEpisodes = listOf(
-            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Episode 1",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Test Description",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
         )
-        rssService.setEpisodes(parsedEpisodes)
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(
+                resultCount = lookupResults.size,
+                results = lookupResults,
+            ),
+        )
 
         viewModel.initialize(podcast)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -197,7 +250,7 @@ class PodcastDetailViewModelTest {
     @Test
     fun clearError_clearsErrorMessage() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
-        rssService.setError(Exception("Error"))
+        appleApiClient.setShouldThrowError(Exception("Error"))
 
         viewModel.initialize(podcast)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -214,10 +267,24 @@ class PodcastDetailViewModelTest {
     @Test
     fun downloadEpisode_success_updatesDownloadState() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
-        val parsedEpisodes = listOf(
-            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Episode 1",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Test Description",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
         )
-        rssService.setEpisodes(parsedEpisodes)
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(
+                resultCount = lookupResults.size,
+                results = lookupResults,
+            ),
+        )
 
         viewModel.initialize(podcast)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -236,10 +303,24 @@ class PodcastDetailViewModelTest {
     @Test
     fun downloadEpisode_failure_setsErrorState() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
-        val parsedEpisodes = listOf(
-            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Episode 1",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Test Description",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
         )
-        rssService.setEpisodes(parsedEpisodes)
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(
+                resultCount = lookupResults.size,
+                results = lookupResults,
+            ),
+        )
         downloadRepository.setShouldFailDownload(true, "Download failed")
 
         viewModel.initialize(podcast)
@@ -259,10 +340,24 @@ class PodcastDetailViewModelTest {
     @Test
     fun deleteDownload_success_updatesEpisodeState() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
-        val parsedEpisodes = listOf(
-            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Episode 1",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Test Description",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
         )
-        rssService.setEpisodes(parsedEpisodes)
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(
+                resultCount = lookupResults.size,
+                results = lookupResults,
+            ),
+        )
         downloadRepository.setDownloadedEpisode("ep1", "/fake/path/ep1.mp3")
 
         viewModel.initialize(podcast)
