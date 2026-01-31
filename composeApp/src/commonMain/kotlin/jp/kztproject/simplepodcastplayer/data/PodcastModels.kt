@@ -42,12 +42,11 @@ data class PodcastLookupResult(
 ) {
     fun isPodcastEpisode(): Boolean = wrapperType == "podcastEpisode"
 
-    fun hasRequiredFields(): Boolean =
-        trackId != null &&
-            trackName != null &&
-            episodeGuid != null &&
-            episodeUrl != null &&
-            releaseDate != null
+    fun hasRequiredFields(): Boolean = trackId != null &&
+        trackName != null &&
+        episodeGuid != null &&
+        episodeUrl != null &&
+        releaseDate != null
 }
 
 @Serializable
