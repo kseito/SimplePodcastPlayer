@@ -19,7 +19,7 @@ interface EpisodeDao {
     @Query("SELECT * FROM episodes WHERE id = :episodeId")
     suspend fun getById(episodeId: String): EpisodeEntity?
 
-    @Query("SELECT * FROM episodes WHERE podcastId = :podcastId ORDER BY publishedAt DESC")
+    @Query("SELECT * FROM episodes WHERE podcastId = :podcastId ORDER BY trackId DESC, publishedAt DESC")
     fun getByPodcastId(podcastId: String): Flow<List<EpisodeEntity>>
 
     @Query("UPDATE episodes SET listened = :listened WHERE id = :episodeId")

@@ -13,7 +13,7 @@ import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
 
 @Database(
     entities = [PodcastEntity::class, EpisodeEntity::class, PlayHistoryEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @ConstructedBy(AppDatabaseConstructor::class)

@@ -38,9 +38,9 @@ val appModule = module {
     viewModel { PodcastSearchViewModel(get()) }
     viewModel { params ->
         PodcastDetailViewModel(
-            rssService = get(),
             podcastRepository = get(),
             downloadRepository = get(),
+            appleApiClient = get(),
             onNavigateToPlayer = params.get<(Episode, Podcast) -> Unit>(),
         )
     }

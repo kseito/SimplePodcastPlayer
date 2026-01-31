@@ -25,4 +25,5 @@ data class ParsedEpisode(
     val publishedAt: String,
     val audioUrl: String,
     val duration: Long, // Duration in seconds
+    val trackId: Long? = null,
 )

@@ -49,14 +49,25 @@ class AppleSearchApiClient : IAppleSearchApiClient {
     }
 
     private companion object {
-        const val BASE_URL = "https://itunes.apple.com/search"
+        const val SEARCH_URL = "https://itunes.apple.com/search"
+        const val LOOKUP_URL = "https://itunes.apple.com/lookup"
     }
 
     override suspend fun searchPodcasts(term: String, limit: Int, country: String): PodcastSearchResponse =
-        client.get(BASE_URL) {
+        client.get(SEARCH_URL) {
             parameter("term", term)
             parameter("country", country)
             parameter("media", "podcast")
+            parameter("limit", limit)
+            header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+            header(HttpHeaders.UserAgent, "SimplePodcastPlayer/1.0")
+        }.body()
+
+    override suspend fun lookupEpisodes(podcastId: Long, limit: Int): PodcastLookupResponse =
+        client.get(LOOKUP_URL) {
+            parameter("id", podcastId)
+            parameter("media", "podcast")
+            parameter("entity", "podcastEpisode")
             parameter("limit", limit)
             header(HttpHeaders.Accept, ContentType.Application.Json.toString())
             header(HttpHeaders.UserAgent, "SimplePodcastPlayer/1.0")

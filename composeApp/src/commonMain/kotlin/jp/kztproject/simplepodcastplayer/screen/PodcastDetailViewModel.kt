@@ -5,12 +5,13 @@ import androidx.lifecycle.viewModelScope
 import io.github.aakira.napier.Napier
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
+import jp.kztproject.simplepodcastplayer.data.IAppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.IRssService
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.util.toDisplayModel
+import jp.kztproject.simplepodcastplayer.util.toParsedEpisode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,9 +19,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class PodcastDetailViewModel(
-    private val rssService: IRssService,
     private val podcastRepository: PodcastRepository,
     private val downloadRepository: IDownloadRepository,
+    private val appleApiClient: IAppleSearchApiClient,
     private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> },
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PodcastDetailUiState())
@@ -116,8 +117,8 @@ class PodcastDetailViewModel(
                     // Subscribed: Load from database (offline support)
                     loadEpisodesFromDatabase(podcast)
                 } else {
-                    // Not subscribed: Fetch from RSS feed
-                    loadEpisodesFromRss(podcast)
+                    // Not subscribed: Fetch from Apple API
+                    loadEpisodesFromAppleApi(podcast)
                 }
 
                 _uiState.value = _uiState.value.copy(
@@ -137,23 +138,29 @@ class PodcastDetailViewModel(
     private suspend fun loadEpisodesFromDatabase(podcast: Podcast): List<EpisodeDisplayModel> {
         val episodes = podcastRepository.getEpisodesByPodcastId(podcast.trackId.toString())
         loadedEpisodes = episodes
-        return episodes.map { episode ->
-            val isDownloaded = downloadRepository.isDownloaded(episode.id)
-            episode.toDisplayModel(isDownloaded)
-        }
+        return episodes
+            .map { episode ->
+                val isDownloaded = downloadRepository.isDownloaded(episode.id)
+                episode.toDisplayModel(isDownloaded)
+            }
+            .sortedByDescending { it.trackId }
     }
 
-    private suspend fun loadEpisodesFromRss(podcast: Podcast): List<EpisodeDisplayModel> {
-        if (podcast.feedUrl.isNullOrBlank()) {
-            _uiState.value = _uiState.value.copy(
-                error = "No RSS feed URL available for this podcast",
-            )
-            return emptyList()
-        }
+    private suspend fun loadEpisodesFromAppleApi(podcast: Podcast): List<EpisodeDisplayModel> {
+        try {
+            val lookupResponse = appleApiClient.lookupEpisodes(podcast.trackId)
+            Napier.d("Apple Lookup API returned ${lookupResponse.resultCount} results")
 
-        val result = rssService.fetchEpisodes(podcast.feedUrl)
-        if (result.isSuccess) {
-            val parsedEpisodes = result.getOrNull() ?: emptyList()
+            val parsedEpisodes = lookupResponse.results
+                .mapNotNull { it.toParsedEpisode() }
+
+            if (parsedEpisodes.isEmpty()) {
+                _uiState.value = _uiState.value.copy(
+                    error = "No episodes found for this podcast",
+                )
+                return emptyList()
+            }
+
             // Store loaded episodes for subscription
             loadedEpisodes =
                 parsedEpisodes.map { parsedEpisode ->
@@ -166,17 +173,20 @@ class PodcastDetailViewModel(
                         duration = parsedEpisode.duration,
                         publishedAt = parsedEpisode.publishedAt,
                         listened = false,
+                        trackId = parsedEpisode.trackId,
                     )
                 }
-            return parsedEpisodes.map { parsedEpisode ->
-                val isDownloaded = downloadRepository.isDownloaded(parsedEpisode.id)
-                parsedEpisode.toDisplayModel(isDownloaded)
-            }
-        } else {
-            val error = result.exceptionOrNull()
-            Napier.e("Failed to load RSS feed", error)
+
+            return parsedEpisodes
+                .map { parsedEpisode ->
+                    val isDownloaded = downloadRepository.isDownloaded(parsedEpisode.id)
+                    parsedEpisode.toDisplayModel(isDownloaded)
+                }
+                .sortedByDescending { it.trackId }
+        } catch (e: Exception) {
+            Napier.e("Failed to load episodes from Apple API", e)
             _uiState.value = _uiState.value.copy(
-                error = "Failed to load RSS feed",
+                error = "Failed to load episodes: ${e.message}",
             )
             return emptyList()
         }
@@ -277,7 +287,7 @@ class PodcastDetailViewModel(
 
     override fun onCleared() {
         super.onCleared()
-        rssService.close()
+        appleApiClient.close()
     }
 }
 

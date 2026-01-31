@@ -42,6 +42,7 @@ class PodcastRepository(private val podcastDao: PodcastDao, private val episodeD
                     duration = episode.duration,
                     publishedAt = episode.publishedAt,
                     listened = episode.listened,
+                    trackId = episode.trackId,
                 )
             episodeDao.insert(episodeEntity)
         }
@@ -84,6 +85,7 @@ class PodcastRepository(private val podcastDao: PodcastDao, private val episodeD
                 duration = entity.duration,
                 publishedAt = entity.publishedAt,
                 listened = entity.listened,
+                trackId = entity.trackId,
             )
         }
     }

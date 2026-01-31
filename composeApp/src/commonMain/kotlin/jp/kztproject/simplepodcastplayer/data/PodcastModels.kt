@@ -12,6 +12,45 @@ data class PodcastSearchResponse(
 )
 
 @Serializable
+data class PodcastLookupResponse(
+    @SerialName("resultCount")
+    val resultCount: Int,
+    @SerialName("results")
+    val results: List<PodcastLookupResult>,
+)
+
+@Serializable
+data class PodcastLookupResult(
+    @SerialName("wrapperType")
+    val wrapperType: String,
+    @SerialName("kind")
+    val kind: String? = null,
+    @SerialName("trackId")
+    val trackId: Long? = null,
+    @SerialName("trackName")
+    val trackName: String? = null,
+    @SerialName("episodeGuid")
+    val episodeGuid: String? = null,
+    @SerialName("releaseDate")
+    val releaseDate: String? = null,
+    @SerialName("trackTimeMillis")
+    val trackTimeMillis: Long? = null,
+    @SerialName("description")
+    val description: String? = null,
+    @SerialName("episodeUrl")
+    val episodeUrl: String? = null,
+) {
+    fun isPodcastEpisode(): Boolean = wrapperType == "podcastEpisode"
+
+    fun hasRequiredFields(): Boolean =
+        trackId != null &&
+            trackName != null &&
+            episodeGuid != null &&
+            episodeUrl != null &&
+            releaseDate != null
+}
+
+@Serializable
 data class Podcast(
     @SerialName("trackId")
     val trackId: Long,
@@ -82,6 +121,8 @@ data class Episode(
     val publishedAt: String,
     @SerialName("listened")
     val listened: Boolean = false,
+    @SerialName("trackId")
+    val trackId: Long? = null,
 )
 
 data class EpisodeDisplayModel(
@@ -93,4 +134,5 @@ data class EpisodeDisplayModel(
     val audioUrl: String,
     val listened: Boolean,
     val isDownloaded: Boolean = false,
+    val trackId: Long? = null,
 )
