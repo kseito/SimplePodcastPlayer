@@ -42,31 +42,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
-import jp.kztproject.simplepodcastplayer.data.IAppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
-import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.parameter.parametersOf
 
 @Composable
 fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigateToPlayer: (Episode, Podcast) -> Unit) {
-    val podcastRepository: PodcastRepository = koinInject()
-    val downloadRepository: IDownloadRepository = koinInject()
-    val appleApiClient: IAppleSearchApiClient = koinInject()
-    val viewModel: PodcastDetailViewModel = viewModel {
-        PodcastDetailViewModel(
-            podcastRepository = podcastRepository,
-            downloadRepository = downloadRepository,
-            appleApiClient = appleApiClient,
-            onNavigateToPlayer = onNavigateToPlayer,
-        )
-    }
+    val viewModel: PodcastDetailViewModel = koinViewModel { parametersOf(onNavigateToPlayer) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
