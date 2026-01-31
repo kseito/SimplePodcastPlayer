@@ -63,15 +63,14 @@ class AppleSearchApiClient : IAppleSearchApiClient {
             header(HttpHeaders.UserAgent, "SimplePodcastPlayer/1.0")
         }.body()
 
-    override suspend fun lookupEpisodes(podcastId: Long, limit: Int): PodcastLookupResponse =
-        client.get(LOOKUP_URL) {
-            parameter("id", podcastId)
-            parameter("media", "podcast")
-            parameter("entity", "podcastEpisode")
-            parameter("limit", limit)
-            header(HttpHeaders.Accept, ContentType.Application.Json.toString())
-            header(HttpHeaders.UserAgent, "SimplePodcastPlayer/1.0")
-        }.body()
+    override suspend fun lookupEpisodes(podcastId: Long, limit: Int): PodcastLookupResponse = client.get(LOOKUP_URL) {
+        parameter("id", podcastId)
+        parameter("media", "podcast")
+        parameter("entity", "podcastEpisode")
+        parameter("limit", limit)
+        header(HttpHeaders.Accept, ContentType.Application.Json.toString())
+        header(HttpHeaders.UserAgent, "SimplePodcastPlayer/1.0")
+    }.body()
 
     override fun close() {
         client.close()
