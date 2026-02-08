@@ -43,6 +43,7 @@ fun formatDuration(durationInSeconds: Long): String {
             val secondsStr = seconds.toString().padStart(TIME_FORMAT_PADDING, '0')
             "$hours:$minutesStr:$secondsStr"
         }
+
         else -> "$minutes:${seconds.toString().padStart(TIME_FORMAT_PADDING, '0')}"
     }
 }
