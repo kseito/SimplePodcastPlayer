@@ -7,6 +7,7 @@ import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.IRssService
+import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
@@ -34,6 +35,20 @@ class PodcastDetailViewModel(
             isLoading = true,
         )
         loadEpisodes(podcast)
+    }
+
+    fun initializeById(podcastId: Long) {
+        _uiState.value = _uiState.value.copy(isLoading = true)
+        viewModelScope.launch {
+            val podcastEntity = podcastRepository.getPodcast(podcastId) ?: run {
+                _uiState.value = _uiState.value.copy(
+                    isLoading = false,
+                    error = "Podcast not found",
+                )
+                return@launch
+            }
+            initialize(podcastEntity.toPodcast())
+        }
     }
 
     fun toggleSubscription() {
@@ -280,6 +295,15 @@ class PodcastDetailViewModel(
         rssService.close()
     }
 }
+
+private fun PodcastEntity.toPodcast(): Podcast = Podcast(
+    trackId = id,
+    trackName = name,
+    artistName = artistName,
+    collectionName = description,
+    artworkUrl100 = imageUrl,
+    feedUrl = feedUrl,
+)
 
 data class PodcastDetailUiState(
     val podcast: Podcast? = null,

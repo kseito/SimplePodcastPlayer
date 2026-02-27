@@ -62,6 +62,65 @@ import org.koin.core.parameter.parametersOf
 import org.koin.dsl.module
 
 @Composable
+fun PodcastDetailScreen(
+    podcastId: Long,
+    onNavigateBack: () -> Unit,
+    onNavigateToPlayer: (Episode, Podcast) -> Unit,
+) {
+    val viewModel: PodcastDetailViewModel = koinViewModel(
+        parameters = { parametersOf(onNavigateToPlayer) }
+    )
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(podcastId) {
+        viewModel.initializeById(podcastId)
+    }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
+    }
+
+    Box {
+        val podcast = uiState.podcast
+        if (podcast != null) {
+            PodcastDetailScreenContent(
+                state = PodcastDetailState(
+                    podcast = podcast,
+                    episodes = uiState.episodes,
+                    isSubscribed = uiState.isSubscribed,
+                    isLoading = uiState.isLoading,
+                    isSubscriptionLoading = uiState.isSubscriptionLoading,
+                    downloadStates = uiState.downloadStates,
+                ),
+                actions = PodcastDetailActions(
+                    onNavigateBack = onNavigateBack,
+                    onSubscribe = { viewModel.toggleSubscription() },
+                    onPlayEpisode = { episodeId -> viewModel.playEpisode(episodeId) },
+                    onDownloadEpisode = { episodeId -> viewModel.downloadEpisode(episodeId) },
+                    onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
+                ),
+            )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+@Composable
 fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigateToPlayer: (Episode, Podcast) -> Unit) {
     val viewModel: PodcastDetailViewModel = koinViewModel(
         parameters = { parametersOf(onNavigateToPlayer) }
