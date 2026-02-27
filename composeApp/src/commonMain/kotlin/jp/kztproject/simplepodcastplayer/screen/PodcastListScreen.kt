@@ -32,16 +32,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
-import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun PodcastListScreen(onNavigateToSearch: () -> Unit, onPodcastClick: (Long) -> Unit) {
-    val podcastRepository: PodcastRepository = koinInject()
-    val viewModel: PodcastListViewModel = viewModel { PodcastListViewModel(podcastRepository) }
+    val viewModel: PodcastListViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Column(
