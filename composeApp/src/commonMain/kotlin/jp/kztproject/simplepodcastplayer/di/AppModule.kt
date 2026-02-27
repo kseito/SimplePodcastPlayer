@@ -9,6 +9,7 @@ import jp.kztproject.simplepodcastplayer.data.RssService
 import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
 import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepositoryBuilder
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
 import jp.kztproject.simplepodcastplayer.screen.PodcastDetailViewModel
@@ -25,7 +26,7 @@ val appModule = module {
     single { get<jp.kztproject.simplepodcastplayer.data.database.AppDatabase>().playHistoryDao() }
 
     // Repositories
-    single { PodcastRepository(get(), get()) }
+    single<IPodcastRepository> { PodcastRepository(get(), get()) }
     single { PlaybackRepository(get(), get()) }
     factory<IDownloadRepository> { DownloadRepositoryBuilder.build() }
 
