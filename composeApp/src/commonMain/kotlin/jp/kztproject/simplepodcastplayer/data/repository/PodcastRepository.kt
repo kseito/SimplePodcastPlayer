@@ -10,12 +10,21 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.datetime.Clock
 
-class PodcastRepository(private val podcastDao: PodcastDao, private val episodeDao: EpisodeDao) {
+interface IPodcastRepository {
+    suspend fun subscribeToPodcast(podcast: Podcast, episodes: List<Episode>)
+    suspend fun unsubscribeFromPodcast(podcastId: Long)
+    suspend fun isSubscribed(podcastId: Long): Boolean
+    fun getSubscribedPodcasts(): Flow<List<PodcastEntity>>
+    suspend fun getPodcast(podcastId: Long): PodcastEntity?
+    suspend fun getEpisodesByPodcastId(podcastId: String): List<Episode>
+}
+
+class PodcastRepository(private val podcastDao: PodcastDao, private val episodeDao: EpisodeDao) : IPodcastRepository {
 
     /**
      * Subscribe to a podcast and save it with its episodes
      */
-    suspend fun subscribeToPodcast(podcast: Podcast, episodes: List<Episode>) {
+    override suspend fun subscribeToPodcast(podcast: Podcast, episodes: List<Episode>) {
         // Save podcast
         val podcastEntity =
             PodcastEntity(
@@ -50,29 +59,29 @@ class PodcastRepository(private val podcastDao: PodcastDao, private val episodeD
     /**
      * Unsubscribe from a podcast
      */
-    suspend fun unsubscribeFromPodcast(podcastId: Long) {
+    override suspend fun unsubscribeFromPodcast(podcastId: Long) {
         podcastDao.updateSubscription(podcastId, false)
     }
 
     /**
      * Check if podcast is subscribed
      */
-    suspend fun isSubscribed(podcastId: Long): Boolean = podcastDao.getById(podcastId)?.subscribed ?: false
+    override suspend fun isSubscribed(podcastId: Long): Boolean = podcastDao.getById(podcastId)?.subscribed ?: false
 
     /**
      * Get all subscribed podcasts
      */
-    fun getSubscribedPodcasts(): Flow<List<PodcastEntity>> = podcastDao.getAll()
+    override fun getSubscribedPodcasts(): Flow<List<PodcastEntity>> = podcastDao.getAll()
 
     /**
      * Get podcast by ID
      */
-    suspend fun getPodcast(podcastId: Long): PodcastEntity? = podcastDao.getById(podcastId)
+    override suspend fun getPodcast(podcastId: Long): PodcastEntity? = podcastDao.getById(podcastId)
 
     /**
      * Get episodes by podcast ID (for offline access)
      */
-    suspend fun getEpisodesByPodcastId(podcastId: String): List<Episode> {
+    override suspend fun getEpisodesByPodcastId(podcastId: String): List<Episode> {
         val entities = episodeDao.getByPodcastId(podcastId).first()
         return entities.map { entity ->
             Episode(
