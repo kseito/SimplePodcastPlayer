@@ -8,7 +8,7 @@ import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.IRssService
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
-import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.util.toDisplayModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +19,7 @@ import kotlinx.coroutines.launch
 
 class PodcastDetailViewModel(
     private val rssService: IRssService,
-    private val podcastRepository: PodcastRepository,
+    private val podcastRepository: IPodcastRepository,
     private val downloadRepository: IDownloadRepository,
     private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> },
 ) : ViewModel() {
