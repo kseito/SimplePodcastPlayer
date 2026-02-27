@@ -62,13 +62,9 @@ import org.koin.core.parameter.parametersOf
 import org.koin.dsl.module
 
 @Composable
-fun PodcastDetailScreen(
-    podcastId: Long,
-    onNavigateBack: () -> Unit,
-    onNavigateToPlayer: (Episode, Podcast) -> Unit,
-) {
+fun PodcastDetailScreen(podcastId: Long, onNavigateBack: () -> Unit, onNavigateToPlayer: (Episode, Podcast) -> Unit) {
     val viewModel: PodcastDetailViewModel = koinViewModel(
-        parameters = { parametersOf(onNavigateToPlayer) }
+        parameters = { parametersOf(onNavigateToPlayer) },
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -123,7 +119,7 @@ fun PodcastDetailScreen(
 @Composable
 fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigateToPlayer: (Episode, Podcast) -> Unit) {
     val viewModel: PodcastDetailViewModel = koinViewModel(
-        parameters = { parametersOf(onNavigateToPlayer) }
+        parameters = { parametersOf(onNavigateToPlayer) },
     )
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
