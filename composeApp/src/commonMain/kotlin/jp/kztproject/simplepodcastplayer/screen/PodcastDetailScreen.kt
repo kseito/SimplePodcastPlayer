@@ -3,6 +3,7 @@ package jp.kztproject.simplepodcastplayer.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -66,21 +67,12 @@ fun PodcastDetailScreen(podcastId: Long, onNavigateBack: () -> Unit, onNavigateT
     val viewModel: PodcastDetailViewModel = koinViewModel(
         parameters = { parametersOf(onNavigateToPlayer) },
     )
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(podcastId) {
         viewModel.initializeById(podcastId)
     }
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
-            viewModel.clearError()
-        }
-    }
-
-    Box {
+    PodcastDetailScreenScaffold(viewModel = viewModel) { uiState ->
         val podcast = uiState.podcast
         if (podcast != null) {
             PodcastDetailScreenContent(
@@ -108,11 +100,6 @@ fun PodcastDetailScreen(podcastId: Long, onNavigateBack: () -> Unit, onNavigateT
                 CircularProgressIndicator()
             }
         }
-
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter),
-        )
     }
 }
 
@@ -121,21 +108,12 @@ fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigate
     val viewModel: PodcastDetailViewModel = koinViewModel(
         parameters = { parametersOf(onNavigateToPlayer) },
     )
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(podcast) {
         viewModel.initialize(podcast)
     }
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
-            viewModel.clearError()
-        }
-    }
-
-    Box {
+    PodcastDetailScreenScaffold(viewModel = viewModel) { uiState ->
         PodcastDetailScreenContent(
             state = PodcastDetailState(
                 podcast = uiState.podcast ?: podcast,
@@ -153,7 +131,26 @@ fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigate
                 onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
             ),
         )
+    }
+}
 
+@Composable
+private fun PodcastDetailScreenScaffold(
+    viewModel: PodcastDetailViewModel,
+    content: @Composable BoxScope.(PodcastDetailUiState) -> Unit,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
+    }
+
+    Box {
+        content(uiState)
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
