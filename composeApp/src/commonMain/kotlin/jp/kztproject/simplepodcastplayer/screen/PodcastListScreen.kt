@@ -32,22 +32,29 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
-import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
-import org.koin.compose.koinInject
+import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun PodcastListScreen(onNavigateToSearch: () -> Unit, onPodcastClick: (Long) -> Unit) {
-    val podcastRepository: PodcastRepository = koinInject()
-    val viewModel: PodcastListViewModel = viewModel { PodcastListViewModel(podcastRepository) }
+    val viewModel: PodcastListViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    PodcastListContent(uiState = uiState, onNavigateToSearch = onNavigateToSearch, onPodcastClick = onPodcastClick)
+}
 
+@Composable
+private fun PodcastListContent(
+    uiState: PodcastListUiState,
+    onNavigateToSearch: () -> Unit,
+    onPodcastClick: (Long) -> Unit,
+) {
     Column(
         modifier =
         Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .padding(16.dp),
     ) {
@@ -192,5 +199,56 @@ private fun PodcastListItem(podcast: PodcastEntity, onClick: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun PodcastListScreenPreview() {
+    MaterialTheme {
+        PodcastListContent(
+            uiState = PodcastListUiState(
+                subscribedPodcasts = listOf(
+                    PodcastEntity(
+                        id = 1L,
+                        name = "Sample Tech Podcast",
+                        artistName = "Tech Creator",
+                        description = "A great podcast about technology and programming.",
+                        imageUrl = null,
+                        feedUrl = "https://example.com/feed.xml",
+                        subscribed = true,
+                        subscribedAt = 0L,
+                    ),
+                    PodcastEntity(
+                        id = 2L,
+                        name = "Another Podcast with a Very Long Title That Should Wrap to the Next Line",
+                        artistName = "Another Creator",
+                        description = "Another great podcast about design and creativity.",
+                        imageUrl = null,
+                        feedUrl = "https://example.com/feed2.xml",
+                        subscribed = true,
+                        subscribedAt = 0L,
+                    ),
+                ),
+                isLoading = false,
+            ),
+            onNavigateToSearch = {},
+            onPodcastClick = {},
+        )
+    }
+}
+
+@Preview
+@Composable
+fun PodcastListScreenEmptyPreview() {
+    MaterialTheme {
+        PodcastListContent(
+            uiState = PodcastListUiState(
+                subscribedPodcasts = emptyList(),
+                isLoading = false,
+            ),
+            onNavigateToSearch = {},
+            onPodcastClick = {},
+        )
     }
 }
