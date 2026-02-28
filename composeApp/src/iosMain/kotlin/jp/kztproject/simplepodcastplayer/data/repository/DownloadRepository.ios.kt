@@ -5,7 +5,7 @@ import jp.kztproject.simplepodcastplayer.download.AudioDownloader
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 actual class DownloadRepository : IDownloadRepository {
     private val audioDownloader = AudioDownloader()

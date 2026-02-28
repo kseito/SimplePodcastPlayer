@@ -5,7 +5,7 @@ import jp.kztproject.simplepodcastplayer.data.database.dao.PlayHistoryDao
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.database.entity.PlayHistoryEntity
 import kotlinx.coroutines.flow.Flow
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHistoryDao: PlayHistoryDao) {
 

@@ -8,7 +8,7 @@ import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 interface IPodcastRepository {
     suspend fun subscribeToPodcast(podcast: Podcast, episodes: List<Episode>)
