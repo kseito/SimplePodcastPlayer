@@ -3,6 +3,7 @@ package jp.kztproject.simplepodcastplayer.screen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,46 +43,77 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.IRssService
+import jp.kztproject.simplepodcastplayer.data.ParsedEpisode
 import jp.kztproject.simplepodcastplayer.data.Podcast
+import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
-import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.koinInject
+import org.koin.compose.KoinApplication
+import org.koin.compose.viewmodel.koinViewModel
+import org.koin.core.module.dsl.viewModel
+import org.koin.core.parameter.parametersOf
+import org.koin.dsl.module
+
+@Composable
+fun PodcastDetailScreen(podcastId: Long, onNavigateBack: () -> Unit, onNavigateToPlayer: (Episode, Podcast) -> Unit) {
+    val viewModel: PodcastDetailViewModel = koinViewModel(
+        parameters = { parametersOf(onNavigateToPlayer) },
+    )
+
+    LaunchedEffect(podcastId) {
+        viewModel.initializeById(podcastId)
+    }
+
+    PodcastDetailScreenScaffold(viewModel = viewModel) { uiState ->
+        val podcast = uiState.podcast
+        if (podcast != null) {
+            PodcastDetailScreenContent(
+                state = PodcastDetailState(
+                    podcast = podcast,
+                    episodes = uiState.episodes,
+                    isSubscribed = uiState.isSubscribed,
+                    isLoading = uiState.isLoading,
+                    isSubscriptionLoading = uiState.isSubscriptionLoading,
+                    downloadStates = uiState.downloadStates,
+                ),
+                actions = PodcastDetailActions(
+                    onNavigateBack = onNavigateBack,
+                    onSubscribe = { viewModel.toggleSubscription() },
+                    onPlayEpisode = { episodeId -> viewModel.playEpisode(episodeId) },
+                    onDownloadEpisode = { episodeId -> viewModel.downloadEpisode(episodeId) },
+                    onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
+                ),
+            )
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator()
+            }
+        }
+    }
+}
 
 @Composable
 fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigateToPlayer: (Episode, Podcast) -> Unit) {
-    val rssService: IRssService = koinInject()
-    val podcastRepository: PodcastRepository = koinInject()
-    val downloadRepository: IDownloadRepository = koinInject()
-    val viewModel: PodcastDetailViewModel = viewModel {
-        PodcastDetailViewModel(
-            rssService = rssService,
-            podcastRepository = podcastRepository,
-            downloadRepository = downloadRepository,
-            onNavigateToPlayer = onNavigateToPlayer,
-        )
-    }
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val viewModel: PodcastDetailViewModel = koinViewModel(
+        parameters = { parametersOf(onNavigateToPlayer) },
+    )
 
     LaunchedEffect(podcast) {
         viewModel.initialize(podcast)
     }
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { error ->
-            snackbarHostState.showSnackbar(error)
-            viewModel.clearError()
-        }
-    }
-
-    Box {
+    PodcastDetailScreenScaffold(viewModel = viewModel) { uiState ->
         PodcastDetailScreenContent(
             state = PodcastDetailState(
                 podcast = uiState.podcast ?: podcast,
@@ -99,7 +131,26 @@ fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigate
                 onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
             ),
         )
+    }
+}
 
+@Composable
+private fun PodcastDetailScreenScaffold(
+    viewModel: PodcastDetailViewModel,
+    content: @Composable BoxScope.(PodcastDetailUiState) -> Unit,
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
+    }
+
+    Box {
+        content(uiState)
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
@@ -426,13 +477,84 @@ fun PodcastDetailScreenPreview() {
         artworkUrl100 = "https://example.com/artwork.jpg",
         primaryGenreName = "Technology",
         trackCount = 150,
+        feedUrl = "https://example.com/feed.xml",
     )
 
+    // プレビュー用のフェイク実装
+    class PreviewRssService : IRssService {
+        override suspend fun fetchEpisodes(feedUrl: String): Result<List<ParsedEpisode>> {
+            val episodes = listOf(
+                ParsedEpisode(
+                    id = "1",
+                    title = "Episode 1: Introduction to Kotlin Multiplatform",
+                    description = "Learn the basics of Kotlin Multiplatform and how to share code across platforms.",
+                    audioUrl = "https://example.com/episode1.mp3",
+                    duration = 2730,
+                    publishedAt = "2024-01-15",
+                ),
+                ParsedEpisode(
+                    id = "2",
+                    title = "Episode 2: Building Cross-Platform UIs with Compose",
+                    description = "Deep dive into Compose Multiplatform for building beautiful UIs.",
+                    audioUrl = "https://example.com/episode2.mp3",
+                    duration = 3135,
+                    publishedAt = "2024-01-22",
+                ),
+                ParsedEpisode(
+                    id = "3",
+                    title = "Episode 3: Advanced State Management",
+                    description = "Master state management patterns in Kotlin Multiplatform applications.",
+                    audioUrl = "https://example.com/episode3.mp3",
+                    duration = 2325,
+                    publishedAt = "2024-01-29",
+                ),
+            )
+            return Result.success(episodes)
+        }
+
+        override fun close() {}
+    }
+
+    class PreviewPodcastRepository : IPodcastRepository {
+        override suspend fun subscribeToPodcast(podcast: Podcast, episodes: List<Episode>) {}
+        override suspend fun unsubscribeFromPodcast(podcastId: Long) {}
+        override suspend fun isSubscribed(podcastId: Long) = false
+        override fun getSubscribedPodcasts(): Flow<List<PodcastEntity>> = flowOf(emptyList())
+        override suspend fun getPodcast(podcastId: Long): PodcastEntity? = null
+        override suspend fun getEpisodesByPodcastId(podcastId: String) = emptyList<Episode>()
+    }
+
+    class PreviewDownloadRepository : IDownloadRepository {
+        override suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> =
+            flowOf(DownloadState.Completed)
+        override fun isDownloaded(episodeId: String) = false
+        override suspend fun deleteDownload(episodeId: String) = true
+        override fun getLocalFilePath(episodeId: String): String? = null
+    }
+
+    val previewModule = module {
+        factory<IRssService> { PreviewRssService() }
+        single<IPodcastRepository> { PreviewPodcastRepository() }
+        factory<IDownloadRepository> { PreviewDownloadRepository() }
+        viewModel { params ->
+            PodcastDetailViewModel(
+                rssService = get(),
+                podcastRepository = get(),
+                downloadRepository = get(),
+                onNavigateToPlayer = params.get<(Episode, Podcast) -> Unit>(),
+            )
+        }
+    }
+
     MaterialTheme {
-        PodcastDetailScreen(
-            podcast = samplePodcast,
-            onNavigateBack = {},
-            onNavigateToPlayer = { _, _ -> },
-        )
+        KoinApplication(application = {
+            modules(previewModule)
+        }) {
+            PodcastDetailScreen(
+                podcast = samplePodcast,
+                onNavigateBack = {},
+                onNavigateToPlayer = { _, _ -> },
+            )
+        }
     }
 }

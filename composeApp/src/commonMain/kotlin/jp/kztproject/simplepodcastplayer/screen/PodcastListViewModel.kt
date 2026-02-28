@@ -4,13 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
-import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class PodcastListViewModel(private val podcastRepository: PodcastRepository) : ViewModel() {
+class PodcastListViewModel(private val podcastRepository: IPodcastRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(PodcastListUiState())
     val uiState: StateFlow<PodcastListUiState> = _uiState.asStateFlow()
 
