@@ -507,45 +507,44 @@ fun PodcastDetailScreenPreview() {
     class PreviewAppleSearchApiClient : IAppleSearchApiClient {
         override suspend fun searchPodcasts(term: String, limit: Int, country: String): PodcastSearchResponse =
             PodcastSearchResponse(resultCount = 0, results = emptyList())
-        override suspend fun lookupEpisodes(podcastId: Long, limit: Int): PodcastLookupResponse =
-            PodcastLookupResponse(
-                resultCount = 3,
-                results = listOf(
-                    PodcastLookupResult(
-                        wrapperType = "podcastEpisode",
-                        kind = "podcast-episode",
-                        trackId = 1001,
-                        trackName = "Episode 1: Introduction to Kotlin Multiplatform",
-                        episodeGuid = "1",
-                        releaseDate = "2024-01-15T10:00:00Z",
-                        trackTimeMillis = 2730000,
-                        description = "Learn the basics of Kotlin Multiplatform.",
-                        episodeUrl = "https://example.com/episode1.mp3",
-                    ),
-                    PodcastLookupResult(
-                        wrapperType = "podcastEpisode",
-                        kind = "podcast-episode",
-                        trackId = 1002,
-                        trackName = "Episode 2: Building Cross-Platform UIs with Compose",
-                        episodeGuid = "2",
-                        releaseDate = "2024-01-22T10:00:00Z",
-                        trackTimeMillis = 3135000,
-                        description = "Deep dive into Compose Multiplatform.",
-                        episodeUrl = "https://example.com/episode2.mp3",
-                    ),
-                    PodcastLookupResult(
-                        wrapperType = "podcastEpisode",
-                        kind = "podcast-episode",
-                        trackId = 1003,
-                        trackName = "Episode 3: Advanced State Management",
-                        episodeGuid = "3",
-                        releaseDate = "2024-01-29T10:00:00Z",
-                        trackTimeMillis = 2325000,
-                        description = "Master state management patterns.",
-                        episodeUrl = "https://example.com/episode3.mp3",
-                    ),
+        override suspend fun lookupEpisodes(podcastId: Long, limit: Int): PodcastLookupResponse = PodcastLookupResponse(
+            resultCount = 3,
+            results = listOf(
+                PodcastLookupResult(
+                    wrapperType = "podcastEpisode",
+                    kind = "podcast-episode",
+                    trackId = 1001,
+                    trackName = "Episode 1: Introduction to Kotlin Multiplatform",
+                    episodeGuid = "1",
+                    releaseDate = "2024-01-15T10:00:00Z",
+                    trackTimeMillis = 2730000,
+                    description = "Learn the basics of Kotlin Multiplatform.",
+                    episodeUrl = "https://example.com/episode1.mp3",
                 ),
-            )
+                PodcastLookupResult(
+                    wrapperType = "podcastEpisode",
+                    kind = "podcast-episode",
+                    trackId = 1002,
+                    trackName = "Episode 2: Building Cross-Platform UIs with Compose",
+                    episodeGuid = "2",
+                    releaseDate = "2024-01-22T10:00:00Z",
+                    trackTimeMillis = 3135000,
+                    description = "Deep dive into Compose Multiplatform.",
+                    episodeUrl = "https://example.com/episode2.mp3",
+                ),
+                PodcastLookupResult(
+                    wrapperType = "podcastEpisode",
+                    kind = "podcast-episode",
+                    trackId = 1003,
+                    trackName = "Episode 3: Advanced State Management",
+                    episodeGuid = "3",
+                    releaseDate = "2024-01-29T10:00:00Z",
+                    trackTimeMillis = 2325000,
+                    description = "Master state management patterns.",
+                    episodeUrl = "https://example.com/episode3.mp3",
+                ),
+            ),
+        )
         override fun close() {}
     }
 
