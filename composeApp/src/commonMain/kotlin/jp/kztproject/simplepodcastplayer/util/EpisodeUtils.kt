@@ -3,6 +3,7 @@ package jp.kztproject.simplepodcastplayer.util
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.ParsedEpisode
+import jp.kztproject.simplepodcastplayer.data.PodcastLookupResult
 
 private const val SECONDS_PER_HOUR = 3600L
 private const val SECONDS_PER_MINUTE = 60L
@@ -19,6 +20,7 @@ fun Episode.toDisplayModel(isDownloaded: Boolean = false): EpisodeDisplayModel =
     audioUrl = audioUrl,
     listened = listened,
     isDownloaded = isDownloaded,
+    trackId = trackId,
 )
 
 fun ParsedEpisode.toDisplayModel(isDownloaded: Boolean = false): EpisodeDisplayModel = EpisodeDisplayModel(
@@ -30,7 +32,40 @@ fun ParsedEpisode.toDisplayModel(isDownloaded: Boolean = false): EpisodeDisplayM
     audioUrl = audioUrl,
     listened = false, // Default to not listened for RSS episodes
     isDownloaded = isDownloaded,
+    trackId = trackId,
 )
+
+fun PodcastLookupResult.toParsedEpisode(): ParsedEpisode? {
+    if (!isPodcastEpisode() || !hasRequiredFields()) {
+        return null
+    }
+
+    return ParsedEpisode(
+        id = episodeGuid!!,
+        title = trackName!!,
+        description = description ?: "",
+        publishedAt = formatReleaseDate(releaseDate!!),
+        audioUrl = episodeUrl!!,
+        duration = (trackTimeMillis ?: 0L) / 1000, // Convert milliseconds to seconds
+        trackId = trackId,
+    )
+}
+
+private fun formatReleaseDate(isoDate: String): String = try {
+    // ISO 8601 format: 2024-12-15T10:00:00Z
+    val parts = isoDate.split("T")[0].split("-")
+    if (parts.size >= DATE_PARTS_COUNT) {
+        val year = parts[0]
+        val month = parts[1].toInt()
+        val day = parts[2].take(DAY_LENGTH)
+        val monthName = getMonthName(month)
+        "$monthName $day, $year"
+    } else {
+        isoDate
+    }
+} catch (_: Exception) {
+    isoDate
+}
 
 fun formatDuration(durationInSeconds: Long): String {
     val hours = durationInSeconds / SECONDS_PER_HOUR

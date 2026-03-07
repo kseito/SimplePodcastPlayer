@@ -27,7 +27,9 @@ class FakeEpisodeDao : EpisodeDao {
     override suspend fun getById(episodeId: String): EpisodeEntity? = episodes.find { it.id == episodeId }
 
     override fun getByPodcastId(podcastId: String): Flow<List<EpisodeEntity>> = episodesFlow.map { allEpisodes ->
-        allEpisodes.filter { it.podcastId == podcastId }.sortedByDescending { it.publishedAt }
+        allEpisodes.filter { it.podcastId == podcastId }.sortedWith(
+            compareByDescending<EpisodeEntity> { it.trackId }.thenByDescending { it.publishedAt },
+        )
     }
 
     override suspend fun updateListenedStatus(episodeId: String, listened: Boolean) {

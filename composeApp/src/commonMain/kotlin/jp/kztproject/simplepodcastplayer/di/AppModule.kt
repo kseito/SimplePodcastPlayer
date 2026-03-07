@@ -3,9 +3,7 @@ package jp.kztproject.simplepodcastplayer.di
 import jp.kztproject.simplepodcastplayer.data.AppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.IAppleSearchApiClient
-import jp.kztproject.simplepodcastplayer.data.IRssService
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.RssService
 import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
 import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepositoryBuilder
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
@@ -31,7 +29,6 @@ val appModule = module {
     factory<IDownloadRepository> { DownloadRepositoryBuilder.build() }
 
     // Services
-    factory<IRssService> { RssService() }
     factory<IAppleSearchApiClient> { AppleSearchApiClient() }
 
     // ViewModels
@@ -39,9 +36,9 @@ val appModule = module {
     viewModel { PodcastSearchViewModel(get()) }
     viewModel { params ->
         PodcastDetailViewModel(
-            rssService = get(),
             podcastRepository = get(),
             downloadRepository = get(),
+            appleApiClient = get(),
             onNavigateToPlayer = params.get<(Episode, Podcast) -> Unit>(),
         )
     }
