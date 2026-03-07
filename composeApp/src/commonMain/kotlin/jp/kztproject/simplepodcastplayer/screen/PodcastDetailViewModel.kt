@@ -116,6 +116,28 @@ class PodcastDetailViewModel(
         }
     }
 
+    fun refreshEpisodes() {
+        val podcast = _uiState.value.podcast ?: return
+        if (!_uiState.value.isSubscribed) return
+
+        _uiState.update { it.copy(isRefreshing = true) }
+
+        viewModelScope.launch {
+            try {
+                val episodes = loadEpisodesFromRss(podcast)
+                if (episodes.isNotEmpty()) {
+                    podcastRepository.saveEpisodes(loadedEpisodes)
+                    _uiState.update { it.copy(episodes = episodes, isRefreshing = false) }
+                } else {
+                    _uiState.update { it.copy(isRefreshing = false) }
+                }
+            } catch (e: Exception) {
+                Napier.e("Failed to refresh episodes", e)
+                _uiState.update { it.copy(isRefreshing = false, error = "Failed to refresh episodes") }
+            }
+        }
+    }
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
@@ -311,6 +333,7 @@ data class PodcastDetailUiState(
     val episodes: List<EpisodeDisplayModel> = emptyList(),
     val isSubscribed: Boolean = false,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSubscriptionLoading: Boolean = false,
     val error: String? = null,
     val downloadStates: Map<String, DownloadState> = emptyMap(),
