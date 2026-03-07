@@ -17,6 +17,7 @@ interface IPodcastRepository {
     fun getSubscribedPodcasts(): Flow<List<PodcastEntity>>
     suspend fun getPodcast(podcastId: Long): PodcastEntity?
     suspend fun getEpisodesByPodcastId(podcastId: String): List<Episode>
+    suspend fun saveEpisodes(episodes: List<Episode>)
 }
 
 class PodcastRepository(private val podcastDao: PodcastDao, private val episodeDao: EpisodeDao) : IPodcastRepository {
@@ -81,6 +82,23 @@ class PodcastRepository(private val podcastDao: PodcastDao, private val episodeD
     /**
      * Get episodes by podcast ID (for offline access)
      */
+    override suspend fun saveEpisodes(episodes: List<Episode>) {
+        episodes.forEach { episode ->
+            val episodeEntity =
+                EpisodeEntity(
+                    id = episode.id,
+                    podcastId = episode.podcastId,
+                    title = episode.title,
+                    description = episode.description,
+                    audioUrl = episode.audioUrl,
+                    duration = episode.duration,
+                    publishedAt = episode.publishedAt,
+                    listened = episode.listened,
+                )
+            episodeDao.insert(episodeEntity)
+        }
+    }
+
     override suspend fun getEpisodesByPodcastId(podcastId: String): List<Episode> {
         val entities = episodeDao.getByPodcastId(podcastId).first()
         return entities.map { entity ->

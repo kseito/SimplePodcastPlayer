@@ -257,6 +257,123 @@ class PodcastDetailViewModelTest {
     }
 
     @Test
+    fun refreshEpisodes_fetchesFromRssAndSavesToDatabase() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val initialEpisodes = listOf(
+            TestDataFactory.createEpisode(id = "ep1", podcastId = "1", title = "Old Episode"),
+        )
+        repository.subscribeToPodcast(podcast, initialEpisodes)
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Set up RSS with new episodes
+        val updatedParsedEpisodes = listOf(
+            TestDataFactory.createParsedEpisode(id = "ep1", title = "Old Episode"),
+            TestDataFactory.createParsedEpisode(id = "ep2", title = "New Episode"),
+        )
+        rssService.setEpisodes(updatedParsedEpisodes)
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isRefreshing)
+            assertEquals(2, state.episodes.size)
+            assertEquals("New Episode", state.episodes[1].title)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        // Verify episodes are saved to database
+        val savedEpisodes = repository.getEpisodesByPodcastId("1")
+        assertEquals(2, savedEpisodes.size)
+    }
+
+    @Test
+    fun refreshEpisodes_preservesListenedState() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val initialEpisodes = listOf(
+            TestDataFactory.createEpisode(id = "ep1", podcastId = "1", title = "Episode 1", listened = true),
+        )
+        repository.subscribeToPodcast(podcast, initialEpisodes)
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // RSS returns same episode with listened=false (RSS doesn't know about listened state)
+        val updatedParsedEpisodes = listOf(
+            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
+            TestDataFactory.createParsedEpisode(id = "ep2", title = "New Episode"),
+        )
+        rssService.setEpisodes(updatedParsedEpisodes)
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            // ep1 should preserve listened=true
+            assertTrue(state.episodes[0].listened)
+            // ep2 is new, so listened=false
+            assertFalse(state.episodes[1].listened)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        // Verify listened state is preserved in database
+        val savedEpisodes = repository.getEpisodesByPodcastId("1")
+        assertTrue(savedEpisodes.first { it.id == "ep1" }.listened)
+        assertFalse(savedEpisodes.first { it.id == "ep2" }.listened)
+    }
+
+    @Test
+    fun refreshEpisodes_rssError_setsErrorMessage() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val episodes = listOf(
+            TestDataFactory.createEpisode(id = "ep1", podcastId = "1", title = "Episode 1"),
+        )
+        repository.subscribeToPodcast(podcast, episodes)
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        rssService.setError(Exception("Network error"))
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isRefreshing)
+            assertNotNull(state.error)
+            // Original episodes should still be available
+            assertEquals(1, state.episodes.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun refreshEpisodes_notSubscribed_doesNothing() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val parsedEpisodes = listOf(
+            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
+        )
+        rssService.setEpisodes(parsedEpisodes)
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isRefreshing)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun deleteDownload_success_updatesEpisodeState() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
         val parsedEpisodes = listOf(

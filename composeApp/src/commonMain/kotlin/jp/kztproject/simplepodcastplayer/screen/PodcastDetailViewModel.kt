@@ -116,6 +116,40 @@ class PodcastDetailViewModel(
         }
     }
 
+    fun refreshEpisodes() {
+        val podcast = _uiState.value.podcast ?: return
+        if (!_uiState.value.isSubscribed) return
+
+        _uiState.update { it.copy(isRefreshing = true) }
+
+        viewModelScope.launch {
+            try {
+                // Preserve listened state from existing episodes
+                val existingEpisodes = podcastRepository.getEpisodesByPodcastId(podcast.trackId.toString())
+                val listenedMap = existingEpisodes.associate { it.id to it.listened }
+
+                val episodes = loadEpisodesFromRss(podcast)
+                if (episodes.isNotEmpty()) {
+                    // Merge listened state into loaded episodes
+                    loadedEpisodes = loadedEpisodes.map { episode ->
+                        episode.copy(listened = listenedMap[episode.id] ?: episode.listened)
+                    }
+                    podcastRepository.saveEpisodes(loadedEpisodes)
+
+                    val mergedDisplayEpisodes = episodes.map { display ->
+                        display.copy(listened = listenedMap[display.id] ?: display.listened)
+                    }
+                    _uiState.update { it.copy(episodes = mergedDisplayEpisodes) }
+                }
+            } catch (e: Exception) {
+                Napier.e("Failed to refresh episodes", e)
+                _uiState.update { it.copy(error = "Failed to refresh episodes") }
+            } finally {
+                _uiState.update { it.copy(isRefreshing = false) }
+            }
+        }
+    }
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
@@ -311,6 +345,7 @@ data class PodcastDetailUiState(
     val episodes: List<EpisodeDisplayModel> = emptyList(),
     val isSubscribed: Boolean = false,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSubscriptionLoading: Boolean = false,
     val error: String? = null,
     val downloadStates: Map<String, DownloadState> = emptyMap(),

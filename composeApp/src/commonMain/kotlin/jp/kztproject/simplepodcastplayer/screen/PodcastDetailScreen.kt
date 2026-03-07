@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
@@ -46,21 +47,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
-import jp.kztproject.simplepodcastplayer.data.IRssService
-import jp.kztproject.simplepodcastplayer.data.ParsedEpisode
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
-import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import org.jetbrains.compose.ui.tooling.preview.Preview
-import org.koin.compose.KoinApplication
 import org.koin.compose.viewmodel.koinViewModel
-import org.koin.core.module.dsl.viewModel
 import org.koin.core.parameter.parametersOf
-import org.koin.dsl.module
 
 @Composable
 fun PodcastDetailScreen(podcastId: Long, onNavigateBack: () -> Unit, onNavigateToPlayer: (Episode, Podcast) -> Unit) {
@@ -81,12 +72,14 @@ fun PodcastDetailScreen(podcastId: Long, onNavigateBack: () -> Unit, onNavigateT
                     episodes = uiState.episodes,
                     isSubscribed = uiState.isSubscribed,
                     isLoading = uiState.isLoading,
+                    isRefreshing = uiState.isRefreshing,
                     isSubscriptionLoading = uiState.isSubscriptionLoading,
                     downloadStates = uiState.downloadStates,
                 ),
                 actions = PodcastDetailActions(
                     onNavigateBack = onNavigateBack,
                     onSubscribe = { viewModel.toggleSubscription() },
+                    onRefresh = { viewModel.refreshEpisodes() },
                     onPlayEpisode = { episodeId -> viewModel.playEpisode(episodeId) },
                     onDownloadEpisode = { episodeId -> viewModel.downloadEpisode(episodeId) },
                     onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
@@ -120,12 +113,14 @@ fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigate
                 episodes = uiState.episodes,
                 isSubscribed = uiState.isSubscribed,
                 isLoading = uiState.isLoading,
+                isRefreshing = uiState.isRefreshing,
                 isSubscriptionLoading = uiState.isSubscriptionLoading,
                 downloadStates = uiState.downloadStates,
             ),
             actions = PodcastDetailActions(
                 onNavigateBack = onNavigateBack,
                 onSubscribe = { viewModel.toggleSubscription() },
+                onRefresh = { viewModel.refreshEpisodes() },
                 onPlayEpisode = { episodeId -> viewModel.playEpisode(episodeId) },
                 onDownloadEpisode = { episodeId -> viewModel.downloadEpisode(episodeId) },
                 onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
@@ -163,6 +158,7 @@ private data class PodcastDetailState(
     val episodes: List<EpisodeDisplayModel>,
     val isSubscribed: Boolean,
     val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false,
     val isSubscriptionLoading: Boolean = false,
     val downloadStates: Map<String, DownloadState> = emptyMap(),
 )
@@ -170,6 +166,7 @@ private data class PodcastDetailState(
 private data class PodcastDetailActions(
     val onNavigateBack: () -> Unit,
     val onSubscribe: () -> Unit,
+    val onRefresh: () -> Unit,
     val onPlayEpisode: (String) -> Unit,
     val onDownloadEpisode: (String) -> Unit,
     val onDeleteDownload: (String) -> Unit,
@@ -214,12 +211,8 @@ private fun PodcastDetailScreenContent(state: PodcastDetailState, actions: Podca
 
         // Episodes section
         EpisodesSection(
-            episodes = state.episodes,
-            isLoading = state.isLoading,
-            downloadStates = state.downloadStates,
-            onPlayEpisode = actions.onPlayEpisode,
-            onDownloadEpisode = actions.onDownloadEpisode,
-            onDeleteDownload = actions.onDeleteDownload,
+            state = state,
+            actions = actions,
         )
     }
 }
@@ -301,22 +294,41 @@ private fun PodcastInfoSection(
 }
 
 @Composable
-private fun EpisodesSection(
-    episodes: List<EpisodeDisplayModel>,
-    isLoading: Boolean,
-    downloadStates: Map<String, DownloadState>,
-    onPlayEpisode: (String) -> Unit,
-    onDownloadEpisode: (String) -> Unit,
-    onDeleteDownload: (String) -> Unit,
-) {
+private fun EpisodesSection(state: PodcastDetailState, actions: PodcastDetailActions) {
     Column {
-        Text(
-            text = "Episodes",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 12.dp),
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Episodes",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            if (state.isSubscribed) {
+                IconButton(
+                    onClick = actions.onRefresh,
+                    enabled = !state.isRefreshing,
+                ) {
+                    if (state.isRefreshing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "Refresh episodes",
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            }
+        }
 
-        if (isLoading) {
+        if (state.isLoading) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -329,13 +341,13 @@ private fun EpisodesSection(
             LazyColumn(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                items(episodes) { episode ->
+                items(state.episodes) { episode ->
                     EpisodeItem(
                         episode = episode,
-                        downloadState = downloadStates[episode.id],
-                        onPlay = { onPlayEpisode(episode.id) },
-                        onDownload = { onDownloadEpisode(episode.id) },
-                        onDeleteDownload = { onDeleteDownload(episode.id) },
+                        downloadState = state.downloadStates[episode.id],
+                        onPlay = { actions.onPlayEpisode(episode.id) },
+                        onDownload = { actions.onDownloadEpisode(episode.id) },
+                        onDeleteDownload = { actions.onDeleteDownload(episode.id) },
                     )
                 }
             }
@@ -480,81 +492,54 @@ fun PodcastDetailScreenPreview() {
         feedUrl = "https://example.com/feed.xml",
     )
 
-    // プレビュー用のフェイク実装
-    class PreviewRssService : IRssService {
-        override suspend fun fetchEpisodes(feedUrl: String): Result<List<ParsedEpisode>> {
-            val episodes = listOf(
-                ParsedEpisode(
-                    id = "1",
-                    title = "Episode 1: Introduction to Kotlin Multiplatform",
-                    description = "Learn the basics of Kotlin Multiplatform and how to share code across platforms.",
-                    audioUrl = "https://example.com/episode1.mp3",
-                    duration = 2730,
-                    publishedAt = "2024-01-15",
-                ),
-                ParsedEpisode(
-                    id = "2",
-                    title = "Episode 2: Building Cross-Platform UIs with Compose",
-                    description = "Deep dive into Compose Multiplatform for building beautiful UIs.",
-                    audioUrl = "https://example.com/episode2.mp3",
-                    duration = 3135,
-                    publishedAt = "2024-01-22",
-                ),
-                ParsedEpisode(
-                    id = "3",
-                    title = "Episode 3: Advanced State Management",
-                    description = "Master state management patterns in Kotlin Multiplatform applications.",
-                    audioUrl = "https://example.com/episode3.mp3",
-                    duration = 2325,
-                    publishedAt = "2024-01-29",
-                ),
-            )
-            return Result.success(episodes)
-        }
-
-        override fun close() {}
-    }
-
-    class PreviewPodcastRepository : IPodcastRepository {
-        override suspend fun subscribeToPodcast(podcast: Podcast, episodes: List<Episode>) {}
-        override suspend fun unsubscribeFromPodcast(podcastId: Long) {}
-        override suspend fun isSubscribed(podcastId: Long) = false
-        override fun getSubscribedPodcasts(): Flow<List<PodcastEntity>> = flowOf(emptyList())
-        override suspend fun getPodcast(podcastId: Long): PodcastEntity? = null
-        override suspend fun getEpisodesByPodcastId(podcastId: String) = emptyList<Episode>()
-    }
-
-    class PreviewDownloadRepository : IDownloadRepository {
-        override suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> =
-            flowOf(DownloadState.Completed)
-        override fun isDownloaded(episodeId: String) = false
-        override suspend fun deleteDownload(episodeId: String) = true
-        override fun getLocalFilePath(episodeId: String): String? = null
-    }
-
-    val previewModule = module {
-        factory<IRssService> { PreviewRssService() }
-        single<IPodcastRepository> { PreviewPodcastRepository() }
-        factory<IDownloadRepository> { PreviewDownloadRepository() }
-        viewModel { params ->
-            PodcastDetailViewModel(
-                rssService = get(),
-                podcastRepository = get(),
-                downloadRepository = get(),
-                onNavigateToPlayer = params.get<(Episode, Podcast) -> Unit>(),
-            )
-        }
-    }
+    val sampleEpisodes = listOf(
+        EpisodeDisplayModel(
+            id = "1",
+            title = "Episode 1: Introduction to Kotlin Multiplatform",
+            description = "Learn the basics of Kotlin Multiplatform and how to share code across platforms.",
+            audioUrl = "https://example.com/episode1.mp3",
+            duration = "45:30",
+            publishedAt = "2024-01-15",
+            listened = false,
+            isDownloaded = false,
+        ),
+        EpisodeDisplayModel(
+            id = "2",
+            title = "Episode 2: Building Cross-Platform UIs with Compose",
+            description = "Deep dive into Compose Multiplatform for building beautiful UIs.",
+            audioUrl = "https://example.com/episode2.mp3",
+            duration = "52:15",
+            publishedAt = "2024-01-22",
+            listened = true,
+            isDownloaded = true,
+        ),
+        EpisodeDisplayModel(
+            id = "3",
+            title = "Episode 3: Advanced State Management",
+            description = "Master state management patterns in Kotlin Multiplatform applications.",
+            audioUrl = "https://example.com/episode3.mp3",
+            duration = "38:45",
+            publishedAt = "2024-01-29",
+            listened = false,
+            isDownloaded = false,
+        ),
+    )
 
     MaterialTheme {
-        KoinApplication(application = {
-            modules(previewModule)
-        }) {
-            PodcastDetailScreen(
+        PodcastDetailScreenContent(
+            state = PodcastDetailState(
                 podcast = samplePodcast,
+                episodes = sampleEpisodes,
+                isSubscribed = true,
+            ),
+            actions = PodcastDetailActions(
                 onNavigateBack = {},
-                onNavigateToPlayer = { _, _ -> },
-            )
-        }
+                onSubscribe = {},
+                onRefresh = {},
+                onPlayEpisode = {},
+                onDownloadEpisode = {},
+                onDeleteDownload = {},
+            ),
+        )
     }
 }

@@ -45,6 +45,7 @@ object TestDataFactory {
         podcastId: String = "1",
         title: String = "Test Episode",
         duration: Long = 1800L,
+        listened: Boolean = false,
     ) = Episode(
         id = id,
         podcastId = podcastId,
@@ -53,7 +54,7 @@ object TestDataFactory {
         audioUrl = "https://example.com/episode.mp3",
         duration = duration,
         publishedAt = "2024-12-15T10:00:00Z",
-        listened = false,
+        listened = listened,
     )
 
     fun createEpisodeEntity(
