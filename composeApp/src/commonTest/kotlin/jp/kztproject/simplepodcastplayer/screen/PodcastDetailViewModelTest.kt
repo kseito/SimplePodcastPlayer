@@ -291,6 +291,42 @@ class PodcastDetailViewModelTest {
     }
 
     @Test
+    fun refreshEpisodes_preservesListenedState() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val initialEpisodes = listOf(
+            TestDataFactory.createEpisode(id = "ep1", podcastId = "1", title = "Episode 1", listened = true),
+        )
+        repository.subscribeToPodcast(podcast, initialEpisodes)
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // RSS returns same episode with listened=false (RSS doesn't know about listened state)
+        val updatedParsedEpisodes = listOf(
+            TestDataFactory.createParsedEpisode(id = "ep1", title = "Episode 1"),
+            TestDataFactory.createParsedEpisode(id = "ep2", title = "New Episode"),
+        )
+        rssService.setEpisodes(updatedParsedEpisodes)
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            // ep1 should preserve listened=true
+            assertTrue(state.episodes[0].listened)
+            // ep2 is new, so listened=false
+            assertFalse(state.episodes[1].listened)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        // Verify listened state is preserved in database
+        val savedEpisodes = repository.getEpisodesByPodcastId("1")
+        assertTrue(savedEpisodes.first { it.id == "ep1" }.listened)
+        assertFalse(savedEpisodes.first { it.id == "ep2" }.listened)
+    }
+
+    @Test
     fun refreshEpisodes_rssError_setsErrorMessage() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
         val episodes = listOf(

@@ -124,16 +124,28 @@ class PodcastDetailViewModel(
 
         viewModelScope.launch {
             try {
+                // Preserve listened state from existing episodes
+                val existingEpisodes = podcastRepository.getEpisodesByPodcastId(podcast.trackId.toString())
+                val listenedMap = existingEpisodes.associate { it.id to it.listened }
+
                 val episodes = loadEpisodesFromRss(podcast)
                 if (episodes.isNotEmpty()) {
+                    // Merge listened state into loaded episodes
+                    loadedEpisodes = loadedEpisodes.map { episode ->
+                        episode.copy(listened = listenedMap[episode.id] ?: episode.listened)
+                    }
                     podcastRepository.saveEpisodes(loadedEpisodes)
-                    _uiState.update { it.copy(episodes = episodes, isRefreshing = false) }
-                } else {
-                    _uiState.update { it.copy(isRefreshing = false) }
+
+                    val mergedDisplayEpisodes = episodes.map { display ->
+                        display.copy(listened = listenedMap[display.id] ?: display.listened)
+                    }
+                    _uiState.update { it.copy(episodes = mergedDisplayEpisodes) }
                 }
             } catch (e: Exception) {
                 Napier.e("Failed to refresh episodes", e)
-                _uiState.update { it.copy(isRefreshing = false, error = "Failed to refresh episodes") }
+                _uiState.update { it.copy(error = "Failed to refresh episodes") }
+            } finally {
+                _uiState.update { it.copy(isRefreshing = false) }
             }
         }
     }
