@@ -338,6 +338,164 @@ class PodcastDetailViewModelTest {
     }
 
     @Test
+    fun refreshEpisodes_fetchesFromAppleApiAndSavesToDatabase() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val initialEpisodes = listOf(
+            TestDataFactory.createEpisode(id = "ep1", podcastId = "1", title = "Old Episode"),
+        )
+        repository.subscribeToPodcast(podcast, initialEpisodes)
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Set up Apple API with new episodes
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Old Episode",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Old Description",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1002L,
+                trackName = "New Episode",
+                episodeGuid = "ep2",
+                releaseDate = "2024-12-16T10:00:00Z",
+                trackTimeMillis = 2400000L,
+                description = "New Description",
+                episodeUrl = "https://example.com/episode2.mp3",
+            ),
+        )
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(resultCount = lookupResults.size, results = lookupResults),
+        )
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isRefreshing)
+            assertEquals(2, state.episodes.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        // Verify episodes are saved to database
+        val savedEpisodes = repository.getEpisodesByPodcastId("1")
+        assertEquals(2, savedEpisodes.size)
+    }
+
+    @Test
+    fun refreshEpisodes_preservesListenedState() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val initialEpisodes = listOf(
+            TestDataFactory.createEpisode(id = "ep1", podcastId = "1", title = "Episode 1", listened = true),
+        )
+        repository.subscribeToPodcast(podcast, initialEpisodes)
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Apple API returns same episode (API doesn't know about listened state)
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Episode 1",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Description 1",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1002L,
+                trackName = "New Episode",
+                episodeGuid = "ep2",
+                releaseDate = "2024-12-16T10:00:00Z",
+                trackTimeMillis = 2400000L,
+                description = "Description 2",
+                episodeUrl = "https://example.com/episode2.mp3",
+            ),
+        )
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(resultCount = lookupResults.size, results = lookupResults),
+        )
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        // Verify listened state is preserved in database
+        val savedEpisodes = repository.getEpisodesByPodcastId("1")
+        assertTrue(savedEpisodes.first { it.id == "ep1" }.listened)
+        assertFalse(savedEpisodes.first { it.id == "ep2" }.listened)
+    }
+
+    @Test
+    fun refreshEpisodes_apiError_setsErrorMessage() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val episodes = listOf(
+            TestDataFactory.createEpisode(id = "ep1", podcastId = "1", title = "Episode 1"),
+        )
+        repository.subscribeToPodcast(podcast, episodes)
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        appleApiClient.setShouldThrowError(Exception("Network error"))
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isRefreshing)
+            assertNotNull(state.error)
+            // Original episodes should still be available
+            assertEquals(1, state.episodes.size)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun refreshEpisodes_notSubscribed_doesNothing() = runTest {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val lookupResults = listOf(
+            PodcastLookupResult(
+                wrapperType = "podcastEpisode",
+                trackId = 1001L,
+                trackName = "Episode 1",
+                episodeGuid = "ep1",
+                releaseDate = "2024-12-15T10:00:00Z",
+                trackTimeMillis = 1800000L,
+                description = "Description",
+                episodeUrl = "https://example.com/episode1.mp3",
+            ),
+        )
+        appleApiClient.setLookupResult(
+            PodcastLookupResponse(resultCount = lookupResults.size, results = lookupResults),
+        )
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.refreshEpisodes()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = awaitItem()
+            assertFalse(state.isRefreshing)
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
     fun deleteDownload_success_updatesEpisodeState() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
         val lookupResults = listOf(
