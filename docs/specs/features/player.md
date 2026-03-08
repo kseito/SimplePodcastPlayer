@@ -59,12 +59,33 @@
 
 ## 状態管理
 
+### PlayerViewModel インターフェース
+
+```kotlin
+interface PlayerViewModel {
+    val uiState: StateFlow<PlayerUiState>
+
+    fun play()
+    fun pause()
+    fun seekTo(position: Long)
+    fun skipForward(seconds: Int = 15)
+    fun skipBackward(seconds: Int = 15)
+    fun setPlaybackSpeed(speed: Float)
+    fun loadEpisode(episode: Episode, podcast: Podcast)
+    fun release()
+}
+```
+
+### PlayerUiState
+
 ```kotlin
 data class PlayerUiState(
     val episode: Episode? = null,
+    val podcast: Podcast? = null,
     val isPlaying: Boolean = false,
     val currentPosition: Long = 0L,
     val duration: Long = 0L,
+    val bufferedPosition: Long = 0L,
     val playbackSpeed: Float = 1.0f,
     val isLoading: Boolean = false,
     val error: String? = null,

@@ -32,10 +32,11 @@
 
 ## 状態管理
 
+`PodcastSearchViewModel` は単一の `data class` ではなく、独立した複数の `StateFlow` で状態を管理している。
+
 ```kotlin
-data class PodcastSearchUiState(
-    val searchResults: List<Podcast> = emptyList(),
-    val isLoading: Boolean = false,
-    val error: String? = null,
-)
+val searchQuery: StateFlow<String>       // 検索テキスト
+val podcasts: StateFlow<List<Podcast>>   // 検索結果
+val isLoading: StateFlow<Boolean>        // ローディング状態
+val errorMessage: StateFlow<String?>     // エラーメッセージ
 ```

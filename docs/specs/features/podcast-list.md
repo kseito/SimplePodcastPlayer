@@ -39,11 +39,11 @@ data class PodcastListUiState(
 
 | カラム | 型 | 説明 |
 |---|---|---|
-| id | Long (PK) | 内部ID |
+| id | Long (PK) | Apple API の trackId |
 | name | String | ポッドキャスト名 |
 | artistName | String | 著者名 |
 | description | String | 説明 |
 | imageUrl | String? | アートワークURL |
-| feedUrl | String | RSSフィードURL |
+| feedUrl | String? | RSSフィードURL |
 | subscribed | Boolean | 購読状態 |
 | subscribedAt | Long | 購読日時（UnixTime） |

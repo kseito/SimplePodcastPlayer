@@ -41,10 +41,11 @@ data class PodcastDetailUiState(
     val podcast: Podcast? = null,
     val episodes: List<EpisodeDisplayModel> = emptyList(),
     val isSubscribed: Boolean = false,
-    val isLoading: Boolean = true,
-    val isSubscriptionLoading: Boolean = false,
+    val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isSubscriptionLoading: Boolean = false,
     val error: String? = null,
+    val downloadStates: Map<String, DownloadState> = emptyMap(),  // エピソードIDごとのDL進捗
 )
 ```
 
@@ -60,8 +61,13 @@ data class PodcastDetailUiState(
 | description | String | 説明 |
 | audioUrl | String | 音声ファイルURL |
 | duration | Long | 再生時間（ミリ秒） |
-| publishedAt | Long | 公開日時（UnixTime） |
+| publishedAt | String | 公開日時（ISO 8601 文字列） |
 | listened | Boolean | 聴取済みフラグ |
+| lastPlaybackPosition | Long | 最後の再生位置（ミリ秒） |
+| isDownloaded | Boolean | ダウンロード済みフラグ |
+| localFilePath | String? | ローカルファイルパス |
+| downloadedAt | Long | ダウンロード日時（UnixTime） |
+| trackId | Long? | Apple API の trackId |
 
 **EpisodeDisplayModel**（表示用モデル、DB エンティティではない）
 
