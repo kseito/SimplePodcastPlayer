@@ -38,6 +38,7 @@ class FooViewModel(private val repository: IFooRepository) : ViewModel() {
 
     private fun loadData() {
         viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
             repository.getData().collect { data ->
                 _uiState.value = _uiState.value.copy(items = data, isLoading = false)
             }
