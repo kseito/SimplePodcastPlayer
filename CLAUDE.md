@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatform, targeting Android and iOS platforms. The project uses a shared UI approach where most code is in the `commonMain` source set.
 
 ### Requirements Documentation
-- **Requirements specification**: See `document/requirements.md` for detailed functional and technical requirements
+- **Requirements specification**: See `docs/specs/features/requirements.md` for detailed functional and technical requirements
 - **Supported platforms**: Android 14+ (API Level 34) and iOS 16+
 - **Core features**: Podcast search, audio playback, subscription management, playback history
 
@@ -59,6 +59,16 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - **Android**: `MainActivity.kt` extends ComponentActivity and calls `App()`
 - **iOS**: Uses `MainViewController.kt` to bridge to the shared `App()` composable
 
+## Documentation
+
+See `docs/` for detailed documentation.
+
+- **Architecture and implementation patterns**: `docs/architecture.md`
+- **Coding conventions and screen addition guide**: `docs/conventions.md`
+- **Feature specifications**: `docs/specs/features/requirements.md`
+
+Before implementing new features or screens, read `docs/architecture.md` and `docs/conventions.md`.
+
 ## Testing
 
 ### Unit Testing
@@ -86,7 +96,7 @@ Current test coverage includes:
 - **GitHub Actions**: Unit tests run automatically on every PR and push to main
 - **Workflow**: `.github/workflows/unit-tests.yml`
 - **Test Reports**: Uploaded as artifacts (14-day retention)
-- See `document/unit-test-implementation-plan.md` for detailed testing strategy
+- See `docs/conventions.md` for detailed testing patterns
 
 ## Code Organization
 - Package structure: `jp.kztproject.simplepodcastplayer`
