@@ -525,6 +525,8 @@ fun PodcastDetailScreenPreview() {
         ),
     )
 
+    SetFakeImageLoaderForPreview()
+
     MaterialTheme {
         PodcastDetailScreenContent(
             state = PodcastDetailState(

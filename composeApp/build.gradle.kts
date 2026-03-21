@@ -65,6 +65,7 @@ kotlin {
             implementation(libs.kotlinx.datetime)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+            implementation(libs.coil.test)
             implementation(libs.room.runtime)
             implementation(libs.sqlite.bundled)
             implementation(libs.napier)

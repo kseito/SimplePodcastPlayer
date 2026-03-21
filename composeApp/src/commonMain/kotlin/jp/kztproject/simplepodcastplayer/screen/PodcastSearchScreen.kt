@@ -283,6 +283,8 @@ fun PodcastSearchScreenWithResultsPreview() {
         )
     }
 
+    SetFakeImageLoaderForPreview()
+
     MaterialTheme {
         PodcastSearchScreenContent(
             podcasts = samplePodcasts,
