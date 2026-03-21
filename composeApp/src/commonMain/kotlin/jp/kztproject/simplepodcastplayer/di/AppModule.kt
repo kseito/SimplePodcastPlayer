@@ -10,6 +10,7 @@ import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
+import jp.kztproject.simplepodcastplayer.screen.InProgressEpisodesViewModel
 import jp.kztproject.simplepodcastplayer.screen.PodcastDetailViewModel
 import jp.kztproject.simplepodcastplayer.screen.PodcastListViewModel
 import jp.kztproject.simplepodcastplayer.screen.PodcastSearchViewModel
@@ -34,6 +35,7 @@ val appModule = module {
     // ViewModels
     viewModel { PodcastListViewModel(get()) }
     viewModel { PodcastSearchViewModel(get()) }
+    viewModel { InProgressEpisodesViewModel(get(), get()) }
     viewModel { params ->
         PodcastDetailViewModel(
             podcastRepository = get(),
