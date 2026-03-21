@@ -47,6 +47,9 @@ interface EpisodeDao {
     @Query("SELECT * FROM episodes WHERE isDownloaded = 1")
     fun getDownloadedEpisodes(): Flow<List<EpisodeEntity>>
 
+    @Query("SELECT * FROM episodes WHERE lastPlaybackPosition > 0 AND listened = 0 ORDER BY lastPlaybackPosition DESC")
+    fun getInProgressEpisodes(): Flow<List<EpisodeEntity>>
+
     @Query("DELETE FROM episodes WHERE id = :episodeId")
     suspend fun delete(episodeId: String)
 }
