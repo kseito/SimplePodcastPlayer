@@ -7,43 +7,55 @@ import jp.kztproject.simplepodcastplayer.data.database.entity.PlayHistoryEntity
 import kotlinx.coroutines.flow.Flow
 import kotlin.time.Clock
 
-class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHistoryDao: PlayHistoryDao) {
+interface IPlaybackRepository {
+    suspend fun savePlaybackPosition(episodeId: String, position: Long)
+    suspend fun getEpisode(episodeId: String): EpisodeEntity?
+    suspend fun getPlaybackPosition(episodeId: String): Long
+    suspend fun markAsListened(episodeId: String)
+    suspend fun saveEpisode(episode: EpisodeEntity)
+    suspend fun recordPlayHistory(episodeId: String, position: Long, completed: Boolean)
+    fun getPlayHistory(episodeId: String): Flow<List<PlayHistoryEntity>>
+    fun getRecentPlayHistory(limit: Int = 50): Flow<List<PlayHistoryEntity>>
+    fun getInProgressEpisodes(): Flow<List<EpisodeEntity>>
+}
+
+class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHistoryDao: PlayHistoryDao) : IPlaybackRepository {
 
     /**
      * Save playback position for an episode
      */
-    suspend fun savePlaybackPosition(episodeId: String, position: Long) {
+    override suspend fun savePlaybackPosition(episodeId: String, position: Long) {
         episodeDao.updatePlaybackPosition(episodeId, position)
     }
 
     /**
      * Get episode from database
      */
-    suspend fun getEpisode(episodeId: String): EpisodeEntity? = episodeDao.getById(episodeId)
+    override suspend fun getEpisode(episodeId: String): EpisodeEntity? = episodeDao.getById(episodeId)
 
     /**
      * Get saved playback position for an episode
      */
-    suspend fun getPlaybackPosition(episodeId: String): Long = episodeDao.getById(episodeId)?.lastPlaybackPosition ?: 0L
+    override suspend fun getPlaybackPosition(episodeId: String): Long = episodeDao.getById(episodeId)?.lastPlaybackPosition ?: 0L
 
     /**
      * Mark episode as listened
      */
-    suspend fun markAsListened(episodeId: String) {
+    override suspend fun markAsListened(episodeId: String) {
         episodeDao.updateListenedStatus(episodeId, true)
     }
 
     /**
      * Save or update episode in database
      */
-    suspend fun saveEpisode(episode: EpisodeEntity) {
+    override suspend fun saveEpisode(episode: EpisodeEntity) {
         episodeDao.insert(episode)
     }
 
     /**
      * Record play history
      */
-    suspend fun recordPlayHistory(episodeId: String, position: Long, completed: Boolean) {
+    override suspend fun recordPlayHistory(episodeId: String, position: Long, completed: Boolean) {
         val playHistory =
             PlayHistoryEntity(
                 episodeId = episodeId,
@@ -57,15 +69,15 @@ class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHis
     /**
      * Get play history for an episode
      */
-    fun getPlayHistory(episodeId: String): Flow<List<PlayHistoryEntity>> = playHistoryDao.getByEpisodeId(episodeId)
+    override fun getPlayHistory(episodeId: String): Flow<List<PlayHistoryEntity>> = playHistoryDao.getByEpisodeId(episodeId)
 
     /**
      * Get recent play history
      */
-    fun getRecentPlayHistory(limit: Int = 50): Flow<List<PlayHistoryEntity>> = playHistoryDao.getRecent(limit)
+    override fun getRecentPlayHistory(limit: Int): Flow<List<PlayHistoryEntity>> = playHistoryDao.getRecent(limit)
 
     /**
      * Get episodes that are in progress (started but not completed)
      */
-    fun getInProgressEpisodes(): Flow<List<EpisodeEntity>> = episodeDao.getInProgressEpisodes()
+    override fun getInProgressEpisodes(): Flow<List<EpisodeEntity>> = episodeDao.getInProgressEpisodes()
 }

@@ -6,8 +6,8 @@ import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
+import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
-import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
 import jp.kztproject.simplepodcastplayer.util.formatDuration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,7 +16,7 @@ import kotlinx.coroutines.launch
 
 @Suppress("MagicNumber")
 class InProgressEpisodesViewModel(
-    private val playbackRepository: PlaybackRepository,
+    private val playbackRepository: IPlaybackRepository,
     private val podcastRepository: IPodcastRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(InProgressEpisodesUiState())

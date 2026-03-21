@@ -5,13 +5,13 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
-import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
 import kotlinx.coroutines.CoroutineScope
 
 class PlayerViewModelImpl(
     exoPlayer: ExoPlayer,
-    playbackRepository: PlaybackRepository,
+    playbackRepository: IPlaybackRepository,
     downloadRepository: IDownloadRepository,
 ) : ViewModel(),
     PlayerViewModel {
