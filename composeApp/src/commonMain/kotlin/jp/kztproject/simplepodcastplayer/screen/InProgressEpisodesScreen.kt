@@ -111,7 +111,7 @@ private fun InProgressEpisodesContent(
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(uiState.episodes) { item ->
+                    items(items = uiState.episodes, key = { it.episode.id }) { item ->
                         InProgressEpisodeItem(
                             item = item,
                             onClick = { onNavigateToPlayer(item.episode, item.podcast) },
