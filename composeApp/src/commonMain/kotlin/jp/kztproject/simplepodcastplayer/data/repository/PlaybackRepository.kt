@@ -19,7 +19,8 @@ interface IPlaybackRepository {
     fun getInProgressEpisodes(): Flow<List<EpisodeEntity>>
 }
 
-class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHistoryDao: PlayHistoryDao) : IPlaybackRepository {
+class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHistoryDao: PlayHistoryDao) :
+    IPlaybackRepository {
 
     /**
      * Save playback position for an episode
@@ -36,7 +37,8 @@ class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHis
     /**
      * Get saved playback position for an episode
      */
-    override suspend fun getPlaybackPosition(episodeId: String): Long = episodeDao.getById(episodeId)?.lastPlaybackPosition ?: 0L
+    override suspend fun getPlaybackPosition(episodeId: String): Long =
+        episodeDao.getById(episodeId)?.lastPlaybackPosition ?: 0L
 
     /**
      * Mark episode as listened
@@ -69,7 +71,8 @@ class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHis
     /**
      * Get play history for an episode
      */
-    override fun getPlayHistory(episodeId: String): Flow<List<PlayHistoryEntity>> = playHistoryDao.getByEpisodeId(episodeId)
+    override fun getPlayHistory(episodeId: String): Flow<List<PlayHistoryEntity>> =
+        playHistoryDao.getByEpisodeId(episodeId)
 
     /**
      * Get recent play history
