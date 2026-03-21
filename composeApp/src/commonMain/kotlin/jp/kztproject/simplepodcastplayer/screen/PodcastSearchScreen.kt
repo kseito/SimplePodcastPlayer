@@ -29,10 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import coil3.ColorImage
-import coil3.ImageLoader
-import coil3.compose.setSingletonImageLoaderFactory
-import coil3.test.FakeImageLoaderEngine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -287,17 +283,7 @@ fun PodcastSearchScreenWithResultsPreview() {
         )
     }
 
-    setSingletonImageLoaderFactory { context ->
-        ImageLoader.Builder(context)
-            .components {
-                add(
-                    FakeImageLoaderEngine.Builder()
-                        .default(ColorImage(0xFF00A3AF.toInt()))
-                        .build(),
-                )
-            }
-            .build()
-    }
+    SetFakeImageLoaderForPreview()
 
     MaterialTheme {
         PodcastSearchScreenContent(

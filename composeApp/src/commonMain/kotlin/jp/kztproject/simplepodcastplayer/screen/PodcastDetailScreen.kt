@@ -37,10 +37,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import coil3.ColorImage
-import coil3.ImageLoader
-import coil3.compose.setSingletonImageLoaderFactory
-import coil3.test.FakeImageLoaderEngine
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -529,17 +525,7 @@ fun PodcastDetailScreenPreview() {
         ),
     )
 
-    setSingletonImageLoaderFactory { context ->
-        ImageLoader.Builder(context)
-            .components {
-                add(
-                    FakeImageLoaderEngine.Builder()
-                        .default(ColorImage(0xFF00A3AF.toInt()))
-                        .build(),
-                )
-            }
-            .build()
-    }
+    SetFakeImageLoaderForPreview()
 
     MaterialTheme {
         PodcastDetailScreenContent(
