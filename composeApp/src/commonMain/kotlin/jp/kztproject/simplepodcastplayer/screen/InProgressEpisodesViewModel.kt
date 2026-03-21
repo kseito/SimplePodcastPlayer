@@ -45,7 +45,7 @@ class InProgressEpisodesViewModel(
         } else {
             0
         }
-        val remainingSeconds = (duration - lastPlaybackPosition / 1000).coerceAtLeast(0L)
+        val remainingSeconds = (duration * 1000 - lastPlaybackPosition).coerceAtLeast(0L) / 1000
         return InProgressEpisodeUiItem(
             episode = toEpisode(),
             podcast = podcastEntity.toPodcast(),
