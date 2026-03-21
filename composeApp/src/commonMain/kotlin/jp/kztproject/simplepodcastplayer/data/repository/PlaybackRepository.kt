@@ -63,4 +63,9 @@ class PlaybackRepository(private val episodeDao: EpisodeDao, private val playHis
      * Get recent play history
      */
     fun getRecentPlayHistory(limit: Int = 50): Flow<List<PlayHistoryEntity>> = playHistoryDao.getRecent(limit)
+
+    /**
+     * Get episodes that are in progress (started but not completed)
+     */
+    fun getInProgressEpisodes(): Flow<List<EpisodeEntity>> = episodeDao.getInProgressEpisodes()
 }
