@@ -69,6 +69,10 @@ class FakeEpisodeDao : EpisodeDao {
         allEpisodes.filter { it.isDownloaded }
     }
 
+    override fun getInProgressEpisodes(): Flow<List<EpisodeEntity>> = episodesFlow.map { list ->
+        list.filter { it.lastPlaybackPosition > 0L && !it.listened }
+    }
+
     override suspend fun delete(episodeId: String) {
         episodes.removeAll { it.id == episodeId }
         episodesFlow.value = episodes.toList()

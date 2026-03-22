@@ -4,7 +4,7 @@ import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
-import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -21,7 +21,7 @@ abstract class BasePlayerViewModel : PlayerViewModel {
     override val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     internal abstract val audioPlayer: AudioPlayer
-    internal abstract val playbackRepository: PlaybackRepository
+    internal abstract val playbackRepository: IPlaybackRepository
     internal abstract val downloadRepository: IDownloadRepository
     internal abstract val coroutineScope: CoroutineScope
 

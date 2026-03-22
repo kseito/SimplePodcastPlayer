@@ -10,6 +10,7 @@ import androidx.navigation.compose.rememberNavController
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.di.appModule
+import jp.kztproject.simplepodcastplayer.screen.InProgressEpisodesScreen
 import jp.kztproject.simplepodcastplayer.screen.PlayerScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastDetailScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastListScreen
@@ -35,6 +36,7 @@ fun App() {
                 composable("list") {
                     PodcastListScreen(
                         onNavigateToSearch = { navController.navigate("search") },
+                        onNavigateToInProgress = { navController.navigate("in_progress") },
                         onPodcastClick = { podcastId ->
                             selectedPodcastId.value = podcastId
                             navController.navigate("list_detail")
@@ -86,6 +88,16 @@ fun App() {
                             )
                         }
                     }
+                }
+                composable("in_progress") {
+                    InProgressEpisodesScreen(
+                        onNavigateBack = { navController.popBackStack() },
+                        onNavigateToPlayer = { episode, podcast ->
+                            selectedEpisode.value = episode
+                            selectedEpisodePodcast.value = podcast
+                            navController.navigate("player")
+                        },
+                    )
                 }
             }
         }

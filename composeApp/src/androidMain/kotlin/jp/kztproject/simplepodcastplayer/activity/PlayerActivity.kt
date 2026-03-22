@@ -16,7 +16,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
-import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.screen.PlayerScreen
 import jp.kztproject.simplepodcastplayer.screen.PlayerViewModelImpl
 import jp.kztproject.simplepodcastplayer.service.PlaybackService
@@ -28,7 +28,7 @@ import org.koin.core.component.inject
 class PlayerActivity :
     ComponentActivity(),
     KoinComponent {
-    private val playbackRepository: PlaybackRepository by inject()
+    private val playbackRepository: IPlaybackRepository by inject()
     private val downloadRepository: IDownloadRepository by inject()
     private var playbackService: PlaybackService? = null
     private var viewModel by mutableStateOf<PlayerViewModelImpl?>(null)

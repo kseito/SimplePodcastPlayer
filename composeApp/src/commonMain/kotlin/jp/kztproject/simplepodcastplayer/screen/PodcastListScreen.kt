@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -38,16 +39,26 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun PodcastListScreen(onNavigateToSearch: () -> Unit, onPodcastClick: (Long) -> Unit) {
+fun PodcastListScreen(
+    onNavigateToSearch: () -> Unit,
+    onNavigateToInProgress: () -> Unit,
+    onPodcastClick: (Long) -> Unit,
+) {
     val viewModel: PodcastListViewModel = koinViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    PodcastListContent(uiState = uiState, onNavigateToSearch = onNavigateToSearch, onPodcastClick = onPodcastClick)
+    PodcastListContent(
+        uiState = uiState,
+        onNavigateToSearch = onNavigateToSearch,
+        onNavigateToInProgress = onNavigateToInProgress,
+        onPodcastClick = onPodcastClick,
+    )
 }
 
 @Composable
 private fun PodcastListContent(
     uiState: PodcastListUiState,
     onNavigateToSearch: () -> Unit,
+    onNavigateToInProgress: () -> Unit,
     onPodcastClick: (Long) -> Unit,
 ) {
     Column(
@@ -71,6 +82,15 @@ private fun PodcastListContent(
             Button(onClick = onNavigateToSearch) {
                 Text("Search")
             }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedButton(
+            onClick = onNavigateToInProgress,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text("In Progress")
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -233,6 +253,7 @@ fun PodcastListScreenPreview() {
                 isLoading = false,
             ),
             onNavigateToSearch = {},
+            onNavigateToInProgress = {},
             onPodcastClick = {},
         )
     }
@@ -248,6 +269,7 @@ fun PodcastListScreenEmptyPreview() {
                 isLoading = false,
             ),
             onNavigateToSearch = {},
+            onNavigateToInProgress = {},
             onPodcastClick = {},
         )
     }
