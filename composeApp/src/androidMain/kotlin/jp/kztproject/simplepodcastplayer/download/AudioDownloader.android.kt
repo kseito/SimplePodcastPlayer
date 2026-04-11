@@ -37,7 +37,7 @@ actual class AudioDownloader(private val context: Context) {
                 val contentLength = response.contentLength() ?: 0L
 
                 file.outputStream().use { output ->
-                    val buffer = ByteArray(8192)
+                    val buffer = ByteArray(DOWNLOAD_BUFFER_SIZE)
                     var totalBytesRead = 0L
 
                     while (true) {
@@ -74,4 +74,8 @@ actual class AudioDownloader(private val context: Context) {
     }
 
     actual fun isDownloaded(episodeId: String): Boolean = getLocalFilePath(episodeId) != null
+
+    private companion object {
+        const val DOWNLOAD_BUFFER_SIZE = 8192
+    }
 }
