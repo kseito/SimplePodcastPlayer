@@ -1,18 +1,19 @@
 package jp.kztproject.simplepodcastplayer.download
 
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.statement.bodyAsBytes
+import io.ktor.client.request.prepareGet
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.http.contentLength
+import io.ktor.utils.io.readAvailable
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
+import platform.Foundation.NSOutputStream
 import platform.Foundation.NSUserDomainMask
-import platform.Foundation.create
 
 class DownloadDataCreationException(message: String) : IllegalStateException(message)
 
@@ -54,22 +55,33 @@ actual class AudioDownloader {
             val fileName = episodeId.replace(Regex("[^a-zA-Z0-9]"), "_") + ".mp3"
             val filePath = "$downloadDir/$fileName"
 
-            // Download the file to memory
-            val bytes = httpClient.get(url).bodyAsBytes()
+            httpClient.prepareGet(url).execute { response ->
+                val channel = response.bodyAsChannel()
+                val contentLength = response.contentLength() ?: 0L
 
-            emit(DownloadState.Downloading(0.5f))
+                val outputStream = NSOutputStream.outputStreamToFileAtPath(filePath, append = false)
+                    ?: throw DownloadDataCreationException("Failed to create output stream for path: $filePath")
+                outputStream.open()
 
-            // Write bytes to file using NSFileManager
-            bytes.usePinned { pinned ->
-                val data = NSData.create(bytes = pinned.addressOf(0), length = bytes.size.toULong())
-                if (data != null) {
-                    NSFileManager.defaultManager.createFileAtPath(
-                        path = filePath,
-                        contents = data,
-                        attributes = null,
-                    )
-                } else {
-                    throw DownloadDataCreationException("Failed to create NSData from downloaded bytes")
+                try {
+                    val buffer = ByteArray(8192)
+                    var totalBytesRead = 0L
+
+                    while (true) {
+                        val bytesRead = channel.readAvailable(buffer)
+                        if (bytesRead == -1) break
+
+                        buffer.usePinned { pinned ->
+                            outputStream.write(pinned.addressOf(0), bytesRead.toULong())
+                        }
+
+                        totalBytesRead += bytesRead
+                        if (contentLength > 0) {
+                            emit(DownloadState.Downloading(totalBytesRead.toFloat() / contentLength.toFloat()))
+                        }
+                    }
+                } finally {
+                    outputStream.close()
                 }
             }
 
