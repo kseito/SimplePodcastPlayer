@@ -2,8 +2,7 @@ package jp.kztproject.simplepodcastplayer.download
 
 import android.content.Context
 import io.ktor.client.HttpClient
-import io.ktor.client.request.get
-import io.ktor.client.statement.HttpResponse
+import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.contentLength
 import io.ktor.utils.io.readAvailable
@@ -33,24 +32,25 @@ actual class AudioDownloader(private val context: Context) {
             val fileName = "${episodeId.replace("[^a-zA-Z0-9]".toRegex(), "_")}.mp3"
             val file = File(downloadDir, fileName)
 
-            val response: HttpResponse = httpClient.get(url)
-            val channel = response.bodyAsChannel()
-            val contentLength = response.contentLength() ?: 0L
+            httpClient.prepareGet(url).execute { response ->
+                val channel = response.bodyAsChannel()
+                val contentLength = response.contentLength() ?: 0L
 
-            file.outputStream().use { output ->
-                val buffer = ByteArray(8192)
-                var totalBytesRead = 0L
+                file.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    var totalBytesRead = 0L
 
-                while (true) {
-                    val bytesRead = channel.readAvailable(buffer)
-                    if (bytesRead == -1) break
+                    while (true) {
+                        val bytesRead = channel.readAvailable(buffer)
+                        if (bytesRead == -1) break
 
-                    output.write(buffer, 0, bytesRead)
-                    totalBytesRead += bytesRead
+                        output.write(buffer, 0, bytesRead)
+                        totalBytesRead += bytesRead
 
-                    if (contentLength > 0) {
-                        val progress = totalBytesRead.toFloat() / contentLength.toFloat()
-                        send(DownloadState.Downloading(progress))
+                        if (contentLength > 0) {
+                            val progress = totalBytesRead.toFloat() / contentLength.toFloat()
+                            send(DownloadState.Downloading(progress))
+                        }
                     }
                 }
             }
