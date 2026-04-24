@@ -7,13 +7,16 @@ import io.ktor.http.contentLength
 import io.ktor.utils.io.readAvailable
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSOutputStream
 import platform.Foundation.NSUserDomainMask
+import platform.posix.fclose
+import platform.posix.fopen
+import platform.posix.fwrite
 
 class DownloadDataCreationException(message: String) : IllegalStateException(message)
 
@@ -59,9 +62,18 @@ actual class AudioDownloader {
                 val channel = response.bodyAsChannel()
                 val contentLength = response.contentLength() ?: 0L
 
-                val outputStream = NSOutputStream.outputStreamToFileAtPath(filePath, append = false)
-                    ?: throw DownloadDataCreationException("Failed to create output stream for path: $filePath")
-                outputStream.open()
+                val fileManager = NSFileManager.defaultManager
+                val fileCreated = fileManager.createFileAtPath(
+                    path = filePath,
+                    contents = null,
+                    attributes = null,
+                )
+                if (!fileCreated && !fileManager.fileExistsAtPath(filePath)) {
+                    throw DownloadDataCreationException("Failed to create file for path: $filePath")
+                }
+
+                val fileHandle = fopen(filePath, "wb")
+                    ?: throw DownloadDataCreationException("Failed to open file for path: $filePath")
 
                 try {
                     val buffer = ByteArray(DOWNLOAD_BUFFER_SIZE)
@@ -71,8 +83,17 @@ actual class AudioDownloader {
                         val bytesRead = channel.readAvailable(buffer)
                         if (bytesRead == -1) break
 
-                        buffer.usePinned { pinned ->
-                            outputStream.write(pinned.addressOf(0), bytesRead.toULong())
+                        val bytesWritten =
+                            buffer.usePinned { pinned ->
+                                fwrite(
+                                    pinned.addressOf(0),
+                                    1.convert(),
+                                    bytesRead.convert(),
+                                    fileHandle,
+                                )
+                            }
+                        if (bytesWritten.toInt() != bytesRead) {
+                            throw DownloadDataCreationException("Failed to write downloaded chunk to file")
                         }
 
                         totalBytesRead += bytesRead
@@ -81,7 +102,7 @@ actual class AudioDownloader {
                         }
                     }
                 } finally {
-                    outputStream.close()
+                    fclose(fileHandle)
                 }
             }
 
