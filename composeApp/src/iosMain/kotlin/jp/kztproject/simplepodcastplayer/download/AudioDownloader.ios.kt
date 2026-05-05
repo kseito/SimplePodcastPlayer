@@ -62,16 +62,6 @@ actual class AudioDownloader {
                 val channel = response.bodyAsChannel()
                 val contentLength = response.contentLength() ?: 0L
 
-                val fileManager = NSFileManager.defaultManager
-                val fileCreated = fileManager.createFileAtPath(
-                    path = filePath,
-                    contents = null,
-                    attributes = null,
-                )
-                if (!fileCreated && !fileManager.fileExistsAtPath(filePath)) {
-                    throw DownloadDataCreationException("Failed to create file for path: $filePath")
-                }
-
                 val fileHandle = fopen(filePath, "wb")
                     ?: throw DownloadDataCreationException("Failed to open file for path: $filePath")
 
