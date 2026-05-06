@@ -82,7 +82,7 @@ actual class AudioDownloader {
                             channel.readAvailable(buffer)
                         } catch (e: Exception) {
                             Napier.d("readAvailable ended: ${e::class.simpleName} - ${e.message}")
-                            break
+                            -1
                         }
                         if (bytesRead == -1) break
 
