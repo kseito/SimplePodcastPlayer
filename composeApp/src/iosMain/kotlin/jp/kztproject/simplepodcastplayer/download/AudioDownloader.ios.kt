@@ -1,19 +1,28 @@
 package jp.kztproject.simplepodcastplayer.download
 
+import io.github.aakira.napier.Napier
 import io.ktor.client.HttpClient
+import kotlin.time.Clock
+import kotlin.time.ExperimentalTime
 import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.contentLength
 import io.ktor.utils.io.readAvailable
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.convert
 import kotlinx.cinterop.usePinned
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSOutputStream
 import platform.Foundation.NSUserDomainMask
+import platform.posix.fclose
+import platform.posix.fopen
+import platform.posix.fwrite
 
 class DownloadDataCreationException(message: String) : IllegalStateException(message)
 
@@ -46,9 +55,9 @@ actual class AudioDownloader {
         return downloadsPath
     }
 
-    @OptIn(ExperimentalForeignApi::class)
-    actual suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = flow {
-        emit(DownloadState.Downloading(0f))
+    @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
+    actual suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = channelFlow {
+        send(DownloadState.Downloading(0f))
 
         try {
             val downloadDir = getDownloadDirectory()
@@ -58,38 +67,59 @@ actual class AudioDownloader {
             httpClient.prepareGet(url).execute { response ->
                 val channel = response.bodyAsChannel()
                 val contentLength = response.contentLength() ?: 0L
+                Napier.d("Download started: contentLength=$contentLength")
 
-                val outputStream = NSOutputStream.outputStreamToFileAtPath(filePath, append = false)
-                    ?: throw DownloadDataCreationException("Failed to create output stream for path: $filePath")
-                outputStream.open()
+                val fileHandle = fopen(filePath, "wb")
+                    ?: throw DownloadDataCreationException("Failed to open file for path: $filePath")
 
                 try {
                     val buffer = ByteArray(DOWNLOAD_BUFFER_SIZE)
                     var totalBytesRead = 0L
+                    var lastEmitMillis = Clock.System.now().toEpochMilliseconds()
 
                     while (true) {
-                        val bytesRead = channel.readAvailable(buffer)
+                        val bytesRead = try {
+                            channel.readAvailable(buffer)
+                        } catch (e: Exception) {
+                            Napier.d("readAvailable ended: ${e::class.simpleName} - ${e.message}")
+                            -1
+                        }
                         if (bytesRead == -1) break
 
-                        buffer.usePinned { pinned ->
-                            outputStream.write(pinned.addressOf(0), bytesRead.toULong())
+                        val bytesWritten =
+                            buffer.usePinned { pinned ->
+                                fwrite(
+                                    pinned.addressOf(0),
+                                    1.convert(),
+                                    bytesRead.convert(),
+                                    fileHandle,
+                                )
+                            }
+                        if (bytesWritten.toInt() != bytesRead) {
+                            throw DownloadDataCreationException("Failed to write downloaded chunk to file")
                         }
 
                         totalBytesRead += bytesRead
                         if (contentLength > 0) {
-                            emit(DownloadState.Downloading(totalBytesRead.toFloat() / contentLength.toFloat()))
+                            val nowMillis = Clock.System.now().toEpochMilliseconds()
+                            if (nowMillis - lastEmitMillis >= PROGRESS_EMIT_INTERVAL_MS) {
+                                val progress = totalBytesRead.toFloat() / contentLength.toFloat()
+                                send(DownloadState.Downloading(progress))
+                                lastEmitMillis = nowMillis
+                            }
                         }
                     }
                 } finally {
-                    outputStream.close()
+                    fclose(fileHandle)
                 }
             }
 
-            emit(DownloadState.Completed)
+            send(DownloadState.Completed)
         } catch (e: Exception) {
-            emit(DownloadState.Failed(e.message ?: "Download failed"))
+            Napier.e("Download failed: ${e::class.simpleName} - ${e.message}", e)
+            send(DownloadState.Failed(e.message ?: "Download failed"))
         }
-    }
+    }.flowOn(Dispatchers.IO)
 
     actual fun getLocalFilePath(episodeId: String): String? {
         val downloadDir = getDownloadDirectory()
@@ -112,5 +142,6 @@ actual class AudioDownloader {
 
     private companion object {
         const val DOWNLOAD_BUFFER_SIZE = 8192
+        const val PROGRESS_EMIT_INTERVAL_MS = 100L
     }
 }

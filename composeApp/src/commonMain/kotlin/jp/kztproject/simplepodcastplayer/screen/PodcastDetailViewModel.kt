@@ -276,7 +276,7 @@ class PodcastDetailViewModel(
 
                         val errorMessage = if (state is DownloadState.Failed) {
                             Napier.e("Download failed: ${state.error}")
-                            "Download failed"
+                            state.error
                         } else {
                             currentState.error
                         }
