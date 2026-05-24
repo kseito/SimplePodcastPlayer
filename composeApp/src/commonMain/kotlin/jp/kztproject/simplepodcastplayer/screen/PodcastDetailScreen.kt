@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -42,7 +43,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -389,58 +392,84 @@ private fun EpisodeItem(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-        ) {
-            // Episode title
-            Text(
-                text = episode.title,
-                style = MaterialTheme.typography.titleMedium,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Episode metadata
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
             ) {
-                Column {
-                    Text(
-                        text = episode.publishedAt,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Text(
-                        text = episode.duration,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // Episode title
+                Text(
+                    text = episode.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
 
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Episode metadata
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Download button
-                    DownloadButton(
-                        isDownloaded = episode.isDownloaded,
-                        downloadState = downloadState,
-                        onDownload = onDownload,
-                        onDeleteDownload = onDeleteDownload,
-                    )
+                    Column {
+                        Text(
+                            text = episode.publishedAt,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = episode.duration,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
 
-                    Button(onClick = onPlay) {
-                        Text("▶")
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Download button
+                        DownloadButton(
+                            isDownloaded = episode.isDownloaded,
+                            downloadState = downloadState,
+                            onDownload = onDownload,
+                            onDeleteDownload = onDeleteDownload,
+                        )
+
+                        Button(onClick = onPlay) {
+                            Text("▶")
+                        }
                     }
                 }
             }
+
+            if (episode.listened) {
+                ListenedRibbon(modifier = Modifier.align(Alignment.TopStart))
+            }
         }
+    }
+}
+
+@Composable
+private fun ListenedRibbon(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .offset(x = (-32).dp, y = 14.dp)
+            .rotate(-45f)
+            .background(MaterialTheme.colorScheme.primary)
+            .width(120.dp)
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "Listened",
+            color = MaterialTheme.colorScheme.onPrimary,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
