@@ -24,11 +24,13 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -274,19 +276,39 @@ private fun PodcastInfoSection(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Subscribe button
-            Button(
-                onClick = onSubscribe,
-                enabled = !isSubscribed && !isSubscriptionLoading,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                if (isSubscriptionLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                    )
-                } else {
-                    Text(if (isSubscribed) "購読中" else "購読する")
+            // Subscribe / Unsubscribe button
+            if (isSubscribed) {
+                OutlinedButton(
+                    onClick = onSubscribe,
+                    enabled = !isSubscriptionLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    if (isSubscriptionLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text("購読解除")
+                    }
+                }
+            } else {
+                Button(
+                    onClick = onSubscribe,
+                    enabled = !isSubscriptionLoading,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (isSubscriptionLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Text("購読する")
+                    }
                 }
             }
         }
