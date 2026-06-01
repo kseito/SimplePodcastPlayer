@@ -102,6 +102,9 @@ abstract class BasePlayerViewModel : PlayerViewModel {
                 audioPlayer.seekTo(savedPosition)
                 _uiState.value = _uiState.value.copy(currentPosition = savedPosition)
             }
+
+            // Start playback automatically once the episode is loaded
+            play()
         }
     }
 
