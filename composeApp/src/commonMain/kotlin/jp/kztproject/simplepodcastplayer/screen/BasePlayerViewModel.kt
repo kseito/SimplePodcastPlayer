@@ -28,6 +28,7 @@ abstract class BasePlayerViewModel : PlayerViewModel {
     internal var positionUpdateJob: Job? = null
     internal var savePositionJob: Job? = null
     internal var durationCheckJob: Job? = null
+    internal var loadJob: Job? = null
 
     // Platform-specific implementations must override these
     abstract override fun play()
@@ -64,8 +65,12 @@ abstract class BasePlayerViewModel : PlayerViewModel {
                 isLoading = true,
             )
 
+        // Cancel any in-flight load so a previous episode's async work
+        // cannot start playback after this point (or after release()).
+        loadJob?.cancel()
+
         // Save episode to database and load playback position
-        coroutineScope.launch {
+        loadJob = coroutineScope.launch {
             // Get existing episode from database to preserve playback position
             val existingEpisode = playbackRepository.getEpisode(episode.id)
 
@@ -97,6 +102,10 @@ abstract class BasePlayerViewModel : PlayerViewModel {
             // Start checking for duration availability
             startDurationCheck()
 
+            // Bail out if the load was cancelled (e.g. screen closed / released)
+            // so we never touch a released player from here on.
+            if (!isActive) return@launch
+
             // Seek to saved position if exists
             if (savedPosition > 0) {
                 audioPlayer.seekTo(savedPosition)
@@ -109,6 +118,7 @@ abstract class BasePlayerViewModel : PlayerViewModel {
     }
 
     override fun release() {
+        loadJob?.cancel()
         saveCurrentPosition()
         stopPositionUpdates()
         stopPeriodicSave()
