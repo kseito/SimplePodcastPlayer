@@ -18,13 +18,16 @@ import jp.kztproject.simplepodcastplayer.screen.PodcastSearchScreen
 import jp.kztproject.simplepodcastplayer.screen.rememberPlayerViewModel
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinApplication
+import org.koin.dsl.koinConfiguration
 
 @Composable
 @Preview
 fun App() {
-    KoinApplication(application = {
-        modules(appModule)
-    }) {
+    KoinApplication(
+        configuration = koinConfiguration {
+            modules(appModule)
+        },
+    ) {
         MaterialTheme {
             val navController = rememberNavController()
             val selectedPodcast = remember { mutableStateOf<Podcast?>(null) }

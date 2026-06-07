@@ -25,9 +25,6 @@ class PodcastSearchViewModel(private val apiClient: IAppleSearchApiClient) : Vie
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    @Deprecated("Use searchQuery instead")
-    val text = MutableStateFlow("")
-
     fun updateSearchQuery(query: String) {
         _searchQuery.update { query }
     }
