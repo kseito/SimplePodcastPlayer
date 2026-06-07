@@ -108,6 +108,19 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    signingConfigs {
+        getByName("debug") {
+            // CIで配置した固定keystoreがあればそれで署名し、無ければ
+            // 各自の ~/.android/debug.keystore（AGPデフォルト）を使う
+            val debugKeystore = rootProject.file("debug.keystore")
+            if (debugKeystore.isFile) {
+                storeFile = debugKeystore
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+        }
+    }
     buildTypes {
         getByName("release") {
             isMinifyEnabled = false
