@@ -1,6 +1,5 @@
 package jp.kztproject.simplepodcastplayer
 
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,6 +15,7 @@ import jp.kztproject.simplepodcastplayer.screen.PodcastDetailScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastListScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastSearchScreen
 import jp.kztproject.simplepodcastplayer.screen.rememberPlayerViewModel
+import jp.kztproject.simplepodcastplayer.ui.theme.AppTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinApplication
 import org.koin.dsl.koinConfiguration
@@ -28,7 +28,7 @@ fun App() {
             modules(appModule)
         },
     ) {
-        MaterialTheme {
+        AppTheme {
             val navController = rememberNavController()
             val selectedPodcast = remember { mutableStateOf<Podcast?>(null) }
             val selectedPodcastId = remember { mutableStateOf<Long?>(null) }
