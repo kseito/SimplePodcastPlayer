@@ -10,6 +10,8 @@ jobs:
   build-android:
     name: Build Android
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
     - name: Checkout code
@@ -35,4 +37,4 @@ jobs:
       run: chmod +x gradlew
 
     - name: Build Android Debug
-      run: ./gradlew assembleDebug
+      run: ./gradlew :androidApp:assembleDebug

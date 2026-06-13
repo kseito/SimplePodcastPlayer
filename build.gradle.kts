@@ -3,6 +3,7 @@ plugins {
     // in each subproject's classloader
     alias(libs.plugins.androidApplication) apply false
     alias(libs.plugins.androidLibrary) apply false
+    alias(libs.plugins.androidKotlinMultiplatformLibrary) apply false
     alias(libs.plugins.composeMultiplatform) apply false
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.detekt)
@@ -13,8 +14,9 @@ plugins {
 detekt {
     source.setFrom(
         "composeApp/src/commonMain/kotlin",
-        "composeApp/src/androidMain/kotlin", 
-        "composeApp/src/iosMain/kotlin"
+        "composeApp/src/androidMain/kotlin",
+        "composeApp/src/iosMain/kotlin",
+        "androidApp/src/main/kotlin"
     )
     config.setFrom("$rootDir/detekt-config.yml")
     buildUponDefaultConfig = true
