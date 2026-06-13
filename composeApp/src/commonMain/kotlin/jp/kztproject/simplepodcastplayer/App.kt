@@ -1,9 +1,12 @@
 package jp.kztproject.simplepodcastplayer
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -16,6 +19,7 @@ import jp.kztproject.simplepodcastplayer.screen.PodcastDetailScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastListScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastSearchScreen
 import jp.kztproject.simplepodcastplayer.screen.rememberPlayerViewModel
+import jp.kztproject.simplepodcastplayer.ui.theme.AppTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinApplication
 import org.koin.dsl.koinConfiguration
@@ -28,79 +32,84 @@ fun App() {
             modules(appModule)
         },
     ) {
-        MaterialTheme {
-            val navController = rememberNavController()
-            val selectedPodcast = remember { mutableStateOf<Podcast?>(null) }
-            val selectedPodcastId = remember { mutableStateOf<Long?>(null) }
-            val selectedEpisode = remember { mutableStateOf<Episode?>(null) }
-            val selectedEpisodePodcast = remember { mutableStateOf<Podcast?>(null) }
+        AppTheme {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background,
+            ) {
+                val navController = rememberNavController()
+                val selectedPodcast = remember { mutableStateOf<Podcast?>(null) }
+                val selectedPodcastId = remember { mutableStateOf<Long?>(null) }
+                val selectedEpisode = remember { mutableStateOf<Episode?>(null) }
+                val selectedEpisodePodcast = remember { mutableStateOf<Podcast?>(null) }
 
-            NavHost(navController = navController, startDestination = "list") {
-                composable("list") {
-                    PodcastListScreen(
-                        onNavigateToSearch = { navController.navigate("search") },
-                        onNavigateToInProgress = { navController.navigate("in_progress") },
-                        onPodcastClick = { podcastId ->
-                            selectedPodcastId.value = podcastId
-                            navController.navigate("list_detail")
-                        },
-                    )
-                }
-                composable("search") {
-                    PodcastSearchScreen(
-                        onNavigateToList = { navController.navigate("list") },
-                        onNavigateToDetail = { podcast ->
-                            selectedPodcast.value = podcast
-                            navController.navigate("detail")
-                        },
-                    )
-                }
-                composable("detail") {
-                    selectedPodcast.value?.let { podcast ->
-                        PodcastDetailScreen(
-                            podcast = podcast,
-                            onNavigateBack = { navController.popBackStack() },
-                            onNavigateToPlayer = { episode, podcastData ->
-                                selectedEpisode.value = episode
-                                selectedEpisodePodcast.value = podcastData
-                                navController.navigate("player")
+                NavHost(navController = navController, startDestination = "list") {
+                    composable("list") {
+                        PodcastListScreen(
+                            onNavigateToSearch = { navController.navigate("search") },
+                            onNavigateToInProgress = { navController.navigate("in_progress") },
+                            onPodcastClick = { podcastId ->
+                                selectedPodcastId.value = podcastId
+                                navController.navigate("list_detail")
                             },
                         )
                     }
-                }
-                composable("list_detail") {
-                    selectedPodcastId.value?.let { podcastId ->
-                        PodcastDetailScreen(
-                            podcastId = podcastId,
-                            onNavigateBack = { navController.popBackStack() },
-                            onNavigateToPlayer = { episode, podcastData ->
-                                selectedEpisode.value = episode
-                                selectedEpisodePodcast.value = podcastData
-                                navController.navigate("player")
+                    composable("search") {
+                        PodcastSearchScreen(
+                            onNavigateToList = { navController.navigate("list") },
+                            onNavigateToDetail = { podcast ->
+                                selectedPodcast.value = podcast
+                                navController.navigate("detail")
                             },
                         )
                     }
-                }
-                composable("player") {
-                    selectedEpisode.value?.let { episode ->
-                        selectedEpisodePodcast.value?.let { podcast ->
-                            val viewModel = rememberPlayerViewModel(episode, podcast)
-                            PlayerScreen(
-                                viewModel = viewModel,
+                    composable("detail") {
+                        selectedPodcast.value?.let { podcast ->
+                            PodcastDetailScreen(
+                                podcast = podcast,
                                 onNavigateBack = { navController.popBackStack() },
+                                onNavigateToPlayer = { episode, podcastData ->
+                                    selectedEpisode.value = episode
+                                    selectedEpisodePodcast.value = podcastData
+                                    navController.navigate("player")
+                                },
                             )
                         }
                     }
-                }
-                composable("in_progress") {
-                    InProgressEpisodesScreen(
-                        onNavigateBack = { navController.popBackStack() },
-                        onNavigateToPlayer = { episode, podcast ->
-                            selectedEpisode.value = episode
-                            selectedEpisodePodcast.value = podcast
-                            navController.navigate("player")
-                        },
-                    )
+                    composable("list_detail") {
+                        selectedPodcastId.value?.let { podcastId ->
+                            PodcastDetailScreen(
+                                podcastId = podcastId,
+                                onNavigateBack = { navController.popBackStack() },
+                                onNavigateToPlayer = { episode, podcastData ->
+                                    selectedEpisode.value = episode
+                                    selectedEpisodePodcast.value = podcastData
+                                    navController.navigate("player")
+                                },
+                            )
+                        }
+                    }
+                    composable("player") {
+                        selectedEpisode.value?.let { episode ->
+                            selectedEpisodePodcast.value?.let { podcast ->
+                                val viewModel = rememberPlayerViewModel(episode, podcast)
+                                PlayerScreen(
+                                    viewModel = viewModel,
+                                    onNavigateBack = { navController.popBackStack() },
+                                )
+                            }
+                        }
+                    }
+                    composable("in_progress") {
+                        InProgressEpisodesScreen(
+                            onNavigateBack = { navController.popBackStack() },
+                            onNavigateToPlayer = { episode, podcast ->
+                                selectedEpisode.value = episode
+                                selectedEpisodePodcast.value = podcast
+                                navController.navigate("player")
+                            },
+                        )
+                    }
                 }
             }
         }
