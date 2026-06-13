@@ -1,0 +1,131 @@
+name: Screenshot Comparison Comment
+
+# screenshot-comparison.yml の完了後に実行され、差分画像を companion ブランチへ push して
+# PR にスクリーンショット比較結果をコメントする。差分が解消したらコメントを削除する。
+# PR からのフォーク経由でも安全に書き込み権限を扱えるよう workflow_run トリガーを使う。
+
+on:
+  workflow_run:
+    workflows:
+      - Screenshot Comparison
+    types:
+      - completed
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch }}-${{ github.event.workflow_run.id }}
+  cancel-in-progress: true
+
+jobs:
+  comment:
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+
+    timeout-minutes: 5
+
+    permissions:
+      actions: read # artifact のダウンロード用
+      contents: write # companion ブランチへの push 用
+      pull-requests: write # PR へのコメント用
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Download PR number
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+        with:
+          name: pr
+          run_id: ${{ github.event.workflow_run.id }}
+
+      - id: get-pull-request-number
+        name: Get pull request number
+        shell: bash
+        run: |
+          echo "pull_request_number=$(cat NR)" >> "$GITHUB_OUTPUT"
+
+      - name: Download comparison results
+        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+        with:
+          run_id: ${{ github.event.workflow_run.id }}
+          name: screenshot-diff-reports
+          path: screenshot-diff-reports
+
+      - id: collect-compare-images
+        name: Collect compare images
+        run: |
+          files=$(find . -type f -name '*_compare.png' | sort)
+          delimiter="$(openssl rand -hex 8)"
+          {
+            echo "screenshot_compare_images<<${delimiter}"
+            echo "$files"
+            echo "${delimiter}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Prepare companion branch and outputs
+        id: prepare-companion-branch
+        if: steps.collect-compare-images.outputs.screenshot_compare_images != ''
+        env:
+          BRANCH_NAME: companion_${{ github.event.workflow_run.head_branch }}
+        run: |
+          delimiter="$(openssl rand -hex 8)"
+          {
+            echo "comment_content<<${delimiter}"
+            echo "## Screenshot Comparison Results"
+          } >> "$GITHUB_OUTPUT"
+
+          # orphan ブランチにすることで履歴を持たない比較結果専用ブランチを作る
+          git branch -D "$BRANCH_NAME" || true
+          git checkout --orphan "$BRANCH_NAME"
+          git rm -rf .
+          echo "${{ steps.collect-compare-images.outputs.screenshot_compare_images }}" | while read file; do
+            [ -n "$file" ] && git add "$file"
+            echo "![](https://github.com/${{ github.repository }}/blob/${BRANCH_NAME}/$(echo "${file}" | sed 's|^\./||')?raw=true)" >> "$GITHUB_OUTPUT"
+          done
+          echo "${delimiter}" >> "$GITHUB_OUTPUT"
+          git config --global user.name github-actions[bot]
+          git config --global user.email github-actions[bot]@users.noreply.github.com
+          git commit -m "Add screenshot diff"
+          git push origin HEAD:"$BRANCH_NAME" -f
+
+      - name: Find Comment
+        uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4
+        id: fc
+        with:
+          issue-number: ${{ steps.get-pull-request-number.outputs.pull_request_number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: Screenshot Comparison Results
+
+      - name: Add or update comment on PR
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
+        if: steps.prepare-companion-branch.outputs.comment_content != ''
+        with:
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          issue-number: ${{ steps.get-pull-request-number.outputs.pull_request_number }}
+          body: ${{ steps.prepare-companion-branch.outputs.comment_content }}
+          edit-mode: replace
+
+      - name: Delete comment when no diff
+        # 差分が無くなったら既存の比較結果コメントを削除する（解消が一目で分かるようにする）
+        if: >
+          steps.collect-compare-images.outputs.screenshot_compare_images == '' &&
+          steps.fc.outputs.comment-id != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api -X DELETE "/repos/${{ github.repository }}/issues/comments/${{ steps.fc.outputs.comment-id }}"
+
+      - name: Cleanup outdated companion branches
+        run: |
+          # 2 週間以上更新の無い companion ブランチを削除する
+          git branch -r --format="%(refname:lstrip=3)" | grep companion_ | while read -r branch; do
+            last_commit_date_timestamp=$(git log -1 --format=%ct "origin/$branch")
+            now_timestamp=$(date +%s)
+            if [ $((now_timestamp - last_commit_date_timestamp)) -gt 1209600 ]; then
+               git push origin --delete "$branch"
+            fi
+          done
