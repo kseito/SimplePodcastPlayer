@@ -18,5 +18,8 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 
+# Roborazzi reference screenshots (artifact 経由でやり取りするためコミットしない)
+composeApp/screenshots/
+
 # Claude Code
 settings.local.json

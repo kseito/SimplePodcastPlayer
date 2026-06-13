@@ -279,7 +279,8 @@ fun PodcastSearchScreenWithResultsPreview() {
             trackViewUrl = "https://example.com/podcast$index",
             artworkUrl100 = "https://example.com/artwork$index.jpg",
             primaryGenreName = if (index % 2 == 0) "Technology" else "Comedy",
-            trackCount = (10..100).random(),
+            // VRT を決定的にするため固定値にする（ランダムだとスクリーンショット差分が毎回発生する）
+            trackCount = index * 10,
         )
     }
 
