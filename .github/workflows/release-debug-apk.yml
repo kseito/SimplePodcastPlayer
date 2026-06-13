@@ -47,9 +47,10 @@ jobs:
     - name: Create GitHub Release with debug APK
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_TAG: ${{ inputs.tag }}
       run: |
-        gh release create "${{ inputs.tag }}" \
+        gh release create "$RELEASE_TAG" \
           androidApp/build/outputs/apk/debug/androidApp-debug.apk \
-          --title "${{ inputs.tag }}" \
+          --title "$RELEASE_TAG" \
           --generate-notes \
           --target "${{ github.sha }}"
