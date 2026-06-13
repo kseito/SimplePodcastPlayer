@@ -15,9 +15,9 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 ### Building and Running
 - **Build project**: `./gradlew build`
 - **Clean build**: `./gradlew clean build`
-- **Run Android app**: `./gradlew :composeApp:installDebug` (requires connected device/emulator)
-- **Run tests**: `./gradlew test`
-- **Run tests for specific module**: `./gradlew :composeApp:testDebugUnitTest`
+- **Run Android app**: `./gradlew :androidApp:installDebug` (requires connected device/emulator)
+- **Run tests**: `./gradlew :composeApp:testAndroidHostTest` (shared unit tests; plain `./gradlew test` does not run them under the KMP library plugin)
+- **Run tests for specific module**: `./gradlew :composeApp:testAndroidHostTest`
 
 ### Code Quality
 - **Run Detekt**: `./gradlew detekt`
@@ -34,11 +34,12 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 
 ### Project Structure
 - **Root project**: Contains Gradle configuration and overall project setup
-- **composeApp**: Main module containing multiplatform code
+- **composeApp**: Shared KMP library module (`com.android.kotlin.multiplatform.library`) containing multiplatform code
   - `commonMain`: Shared code for all platforms (UI, business logic)
-  - `androidMain`: Android-specific implementations and MainActivity
+  - `androidMain`: Android-specific `actual` implementations and Android components reused by shared code (`PlaybackService`, `PlayerActivity`)
   - `iosMain`: iOS-specific implementations and MainViewController
   - `commonTest`: Shared test code
+- **androidApp**: Android application module (`com.android.application`) — entry point (`MainActivity`), `AndroidManifest.xml`, resources/icons, signing/versioning. Depends on `:composeApp`.
 - **iosApp**: iOS native app wrapper (Xcode project)
 
 ### Key Dependencies
@@ -56,7 +57,7 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - Navigation is managed using a `NavController`, with state passed between composables to determine which podcast or episode to display.
 
 ### Platform-Specific Entry Points
-- **Android**: `MainActivity.kt` extends ComponentActivity and calls `App()`
+- **Android**: `MainActivity.kt` (in the `androidApp` module) extends ComponentActivity and calls `App()`
 - **iOS**: Uses `MainViewController.kt` to bridge to the shared `App()` composable
 
 ## Documentation
@@ -74,8 +75,8 @@ Before implementing new features or screens, read `docs/architecture.md` and `do
 ### Unit Testing
 - **Test Framework**: kotlin-test with kotlinx-coroutines-test for async testing
 - **Test Utilities**: Turbine for Flow testing, Koin for dependency injection
-- **Run all tests**: `./gradlew test`
-- **Run specific test suite**: `./gradlew :composeApp:testDebugUnitTest`
+- **Run all tests**: `./gradlew :composeApp:testAndroidHostTest`
+- **Run specific test suite**: `./gradlew :composeApp:testAndroidHostTest`
 - **Test location**: `composeApp/src/commonTest` for shared tests
 - **Test reports**: Generated in `composeApp/build/reports/tests/`
 
@@ -110,7 +111,7 @@ Current test coverage includes:
 GitHub Actions workflows run automatically on every PR and push to main:
 
 - **Unit Tests** (`.github/workflows/unit-tests.yml`):
-  - Runs all unit tests with `./gradlew test`
+  - Runs all unit tests with `./gradlew :composeApp:testAndroidHostTest`
   - Uploads test reports as artifacts
 
 - **Detekt** (`.github/workflows/detekt.yml`):

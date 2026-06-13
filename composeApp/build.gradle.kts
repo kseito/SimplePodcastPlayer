@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.androidKotlinMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlinSerialization)
@@ -13,11 +13,23 @@ plugins {
 }
 
 kotlin {
-    androidTarget {
+    androidLibrary {
+        namespace = "jp.kztproject.simplepodcastplayer.shared"
+        compileSdk =
+            libs.versions.android.compileSdk
+                .get()
+                .toInt()
+        minSdk =
+            libs.versions.android.minSdk
+                .get()
+                .toInt()
+
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
+
+        withHostTestBuilder {}
     }
 
     listOf(
@@ -33,7 +45,6 @@ kotlin {
     sourceSets {
 
         androidMain.dependencies {
-            implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.android)
             implementation(libs.androidx.media3.exoplayer)
@@ -83,57 +94,7 @@ kotlin {
     }
 }
 
-android {
-    namespace = "jp.kztproject.simplepodcastplayer"
-    compileSdk =
-        libs.versions.android.compileSdk
-            .get()
-            .toInt()
-
-    defaultConfig {
-        applicationId = "jp.kztproject.simplepodcastplayer"
-        minSdk =
-            libs.versions.android.minSdk
-                .get()
-                .toInt()
-        targetSdk =
-            libs.versions.android.targetSdk
-                .get()
-                .toInt()
-        versionCode = 1
-        versionName = "1.0"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-    signingConfigs {
-        getByName("debug") {
-            // CIで配置した固定keystoreがあればそれで署名し、無ければ
-            // 各自の ~/.android/debug.keystore（AGPデフォルト）を使う
-            val debugKeystore = rootProject.file("debug.keystore")
-            if (debugKeystore.isFile) {
-                storeFile = debugKeystore
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-            }
-        }
-    }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
 dependencies {
-    debugImplementation(compose.uiTooling)
     add("kspAndroid", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)

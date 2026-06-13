@@ -42,14 +42,14 @@ jobs:
       run: echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > debug.keystore
 
     - name: Build debug APK
-      run: ./gradlew assembleDebug
+      run: ./gradlew :androidApp:assembleDebug
 
     - name: Create GitHub Release with debug APK
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         gh release create "${{ inputs.tag }}" \
-          composeApp/build/outputs/apk/debug/composeApp-debug.apk \
+          androidApp/build/outputs/apk/debug/androidApp-debug.apk \
           --title "${{ inputs.tag }}" \
           --generate-notes \
           --target "${{ github.sha }}"
