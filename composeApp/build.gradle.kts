@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.spotless)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    alias(libs.plugins.roborazzi)
 }
 
 kotlin {
@@ -30,6 +31,10 @@ kotlin {
         }
 
         withHostTestBuilder {}
+            .configure {
+                // Robolectric が Android リソース/マニフェストを読めるようにする（Roborazzi スクリーンショットテスト用）
+                isIncludeAndroidResources = true
+            }
     }
 
     listOf(
@@ -50,6 +55,10 @@ kotlin {
             implementation(libs.androidx.media3.exoplayer)
             implementation(libs.androidx.media3.session)
             implementation(libs.androidx.media3.ui)
+            // Showkase: Preview を自動列挙してスクリーンショット VRT 対象にする（Android のみ）
+            implementation(libs.showkase)
+            implementation(libs.showkase.annotation)
+            implementation(libs.androidx.compose.ui.tooling.preview)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -91,6 +100,18 @@ kotlin {
             implementation(libs.kotlinx.coroutines.test)
             implementation(libs.turbine)
         }
+        getByName("androidHostTest").dependencies {
+            // Roborazzi + Robolectric によるスクリーンショット VRT（Android ホストテスト）
+            implementation(libs.junit)
+            implementation(libs.robolectric)
+            implementation(libs.androidx.test.core)
+            implementation(libs.androidx.junit)
+            implementation(libs.androidx.compose.ui.test.junit4)
+            implementation(libs.androidx.compose.ui.test.manifest)
+            implementation(libs.roborazzi)
+            implementation(libs.roborazzi.compose)
+            implementation(libs.roborazzi.rule)
+        }
     }
 }
 
@@ -98,10 +119,17 @@ dependencies {
     add("kspAndroid", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
+    // Showkase の Preview メタデータを生成（Android のみ）
+    add("kspAndroid", libs.showkase.processor)
 }
 
 room {
     schemaDirectory("$projectDir/schemas")
+}
+
+roborazzi {
+    // 参照画像の出力先（artifact 経由でやり取りするためコミットはしない）
+    outputDir.set(file("screenshots"))
 }
 
 spotless {
