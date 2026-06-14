@@ -1,3 +1,5 @@
+@file:Suppress("OPT_IN_USAGE_ERROR", "OPT_IN_USAGE")
+
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -55,10 +57,6 @@ kotlin {
             implementation(libs.androidx.media3.exoplayer)
             implementation(libs.androidx.media3.session)
             implementation(libs.androidx.media3.ui)
-            // Showkase: Preview を自動列挙してスクリーンショット VRT 対象にする（Android のみ）
-            implementation(libs.showkase)
-            implementation(libs.showkase.annotation)
-            implementation(libs.androidx.compose.ui.tooling.preview)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -102,6 +100,8 @@ kotlin {
         }
         getByName("androidHostTest").dependencies {
             // Roborazzi + Robolectric によるスクリーンショット VRT（Android ホストテスト）
+            // ComposablePreviewScanner が CMP の @Preview を直接走査し、
+            // Roborazzi がプレビュー用 Robolectric テストを自動生成する。
             implementation(libs.junit)
             implementation(libs.robolectric)
             implementation(libs.androidx.test.core)
@@ -111,6 +111,14 @@ kotlin {
             implementation(libs.roborazzi)
             implementation(libs.roborazzi.compose)
             implementation(libs.roborazzi.rule)
+            implementation(libs.roborazzi.preview.scanner.support)
+            implementation(libs.composable.preview.scanner.android)
+            implementation(libs.composable.preview.scanner.jvm)
+            // CoilRule 用（commonMain の implementation 依存はテストへ伝播しないため明示）
+            implementation(libs.coil.compose)
+            implementation(libs.coil.test)
+            // ProvideAndroidContextToComposeResource 用（Compose Resources を Robolectric 上で解決）
+            implementation(compose.components.resources)
         }
     }
 }
@@ -119,8 +127,6 @@ dependencies {
     add("kspAndroid", libs.room.compiler)
     add("kspIosSimulatorArm64", libs.room.compiler)
     add("kspIosArm64", libs.room.compiler)
-    // Showkase の Preview メタデータを生成（Android のみ）
-    add("kspAndroid", libs.showkase.processor)
 }
 
 room {
@@ -130,6 +136,30 @@ room {
 roborazzi {
     // 参照画像の出力先（artifact 経由でやり取りするためコミットはしない）
     outputDir.set(file("screenshots"))
+
+    // CMP の @Preview を ComposablePreviewScanner で走査し、
+    // プレビューごとの Robolectric スクリーンショットテストを自動生成する。
+    generateComposePreviewRobolectricTests {
+        enable = true
+        // App() などのアプリ全体プレビューを除外し、画面プレビューのみを対象にする
+        packages = listOf("jp.kztproject.simplepodcastplayer.screen")
+        includePrivatePreviews = true
+        // カスタム Tester 使用時は scanOptions を Tester 側で参照する必要がある
+        useScanOptionParametersInTester = true
+        testerQualifiedClassName =
+            "jp.kztproject.simplepodcastplayer.previewtester.SimplePodcastPlayerPreviewTester"
+        robolectricConfig =
+            mapOf(
+                "sdk" to "[35]",
+                "qualifiers" to "RobolectricDeviceQualifiers.Pixel4a",
+            )
+    }
+}
+
+tasks.withType<Test>().configureEach {
+    // Roborazzi のスクリーンショットをネイティブグラフィックスで描画する
+    systemProperty("robolectric.graphicsMode", "NATIVE")
+    systemProperty("robolectric.pixelCopyRenderMode", "hardware")
 }
 
 spotless {
