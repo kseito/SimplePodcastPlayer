@@ -265,6 +265,8 @@ fun PodcastSearchScreenPreview() {
             podcasts = emptyList(),
             onNavigateToList = {},
             onNavigateToDetail = {},
+            // 検索バー/ボタンは onSearch が非 null のときだけ描画されるため、Preview でも渡す
+            onSearch = {},
         )
     }
 }
@@ -293,6 +295,8 @@ fun PodcastSearchScreenWithResultsPreview() {
             podcasts = samplePodcasts,
             onNavigateToList = {},
             onNavigateToDetail = {},
+            // 検索バー/ボタンは onSearch が非 null のときだけ描画されるため、Preview でも渡す
+            onSearch = {},
         )
     }
 }
