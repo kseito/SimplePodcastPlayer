@@ -29,4 +29,10 @@ class CoilRule : TestWatcher() {
                 .build()
         SingletonImageLoader.setUnsafe(imageLoader)
     }
+
+    override fun finished(description: Description?) {
+        super.finished(description)
+        // 同一 JVM で動く後続テストへフェイク ImageLoader が残留しないようリセットする
+        SingletonImageLoader.reset()
+    }
 }
