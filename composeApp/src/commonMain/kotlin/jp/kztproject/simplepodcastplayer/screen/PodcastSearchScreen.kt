@@ -259,10 +259,14 @@ private fun PodcastImage(podcast: Podcast) {
 @Preview
 @Composable
 fun PodcastSearchScreenPreview() {
+    // ステートレスな Content を使う（koinViewModel を介さないため VRT でも描画可能）
     MaterialTheme {
-        PodcastSearchScreen(
+        PodcastSearchScreenContent(
+            podcasts = emptyList(),
             onNavigateToList = {},
             onNavigateToDetail = {},
+            // 検索バー/ボタンは onSearch が非 null のときだけ描画されるため、Preview でも渡す
+            onSearch = {},
         )
     }
 }
@@ -291,6 +295,8 @@ fun PodcastSearchScreenWithResultsPreview() {
             podcasts = samplePodcasts,
             onNavigateToList = {},
             onNavigateToDetail = {},
+            // 検索バー/ボタンは onSearch が非 null のときだけ描画されるため、Preview でも渡す
+            onSearch = {},
         )
     }
 }
