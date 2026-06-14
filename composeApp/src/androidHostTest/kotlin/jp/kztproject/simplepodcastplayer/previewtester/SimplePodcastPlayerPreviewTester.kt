@@ -32,13 +32,17 @@ class SimplePodcastPlayerPreviewTester :
     override fun test(testParameter: ComposePreviewTester.TestParameter.JUnit4TestParameter<JvmAnnotationInfo>) {
         val preview = testParameter.preview
         val screenshotNameSuffix = preview.previewIndex?.let { "_$it" }.orEmpty()
+        // 別ファイルに同名の @Preview があってもファイル名が衝突しないよう、宣言クラス名を接頭辞に付ける
+        val declaringClassName = preview.declaringClass.substringAfterLast(".")
         testParameter.composeTestRule.setContent {
             ProvideAndroidContextToComposeResource()
             preview()
         }
         testParameter.composeTestRule
             .onRoot()
-            .captureRoboImage("screenshots/${preview.methodName}$screenshotNameSuffix.png")
+            .captureRoboImage(
+                "screenshots/${declaringClassName}_${preview.methodName}$screenshotNameSuffix.png",
+            )
     }
 
     override fun testParameters(): List<ComposePreviewTester.TestParameter.JUnit4TestParameter<JvmAnnotationInfo>> {
