@@ -29,9 +29,7 @@ private const val COMPOSE_PREVIEW_ANNOTATION = "org.jetbrains.compose.ui.tooling
 @OptIn(ExperimentalRoborazziApi::class)
 class SimplePodcastPlayerPreviewTester :
     ComposePreviewTester<ComposePreviewTester.TestParameter.JUnit4TestParameter<JvmAnnotationInfo>> {
-    override fun test(
-        testParameter: ComposePreviewTester.TestParameter.JUnit4TestParameter<JvmAnnotationInfo>,
-    ) {
+    override fun test(testParameter: ComposePreviewTester.TestParameter.JUnit4TestParameter<JvmAnnotationInfo>) {
         val preview = testParameter.preview
         val screenshotNameSuffix = preview.previewIndex?.let { "_$it" }.orEmpty()
         testParameter.composeTestRule.setContent {
@@ -51,38 +49,38 @@ class SimplePodcastPlayerPreviewTester :
                 .let {
                     if (options.scanOptions.includePrivatePreviews) it.includePrivatePreviews() else it
                 }
+        val lifecycleOptions =
+            options.testLifecycleOptions as ComposePreviewTester.Options.JUnit4TestLifecycleOptions
         return scanResult
             .getPreviews()
             .map {
                 ComposePreviewTester.TestParameter.JUnit4TestParameter(
-                    composeTestRuleFactory =
-                        (options.testLifecycleOptions as ComposePreviewTester.Options.JUnit4TestLifecycleOptions).composeRuleFactory,
+                    composeTestRuleFactory = lifecycleOptions.composeRuleFactory,
                     preview = it,
                 )
             }
     }
 
-    override fun options(): ComposePreviewTester.Options =
-        super.options().copy(
-            testLifecycleOptions =
-                ComposePreviewTester.Options.JUnit4TestLifecycleOptions(
-                    composeRuleFactory = {
-                        @Suppress("UNCHECKED_CAST")
-                        createAndroidComposeRule<RoborazziActivity>() as
-                            AndroidComposeTestRule<ActivityScenarioRule<out androidx.activity.ComponentActivity>, *>
+    override fun options(): ComposePreviewTester.Options = super.options().copy(
+        testLifecycleOptions =
+        ComposePreviewTester.Options.JUnit4TestLifecycleOptions(
+            composeRuleFactory = {
+                @Suppress("UNCHECKED_CAST")
+                createAndroidComposeRule<RoborazziActivity>() as
+                    AndroidComposeTestRule<ActivityScenarioRule<out androidx.activity.ComponentActivity>, *>
+            },
+            testRuleFactory = { composeTestRule ->
+                RuleChain.outerRule(
+                    object : TestWatcher() {
+                        override fun starting(description: Description?) {
+                            super.starting(description)
+                            registerRoborazziActivityToRobolectricIfNeeded()
+                        }
                     },
-                    testRuleFactory = { composeTestRule ->
-                        RuleChain.outerRule(
-                            object : TestWatcher() {
-                                override fun starting(description: Description?) {
-                                    super.starting(description)
-                                    registerRoborazziActivityToRobolectricIfNeeded()
-                                }
-                            },
-                        )
-                            .around(composeTestRule)
-                            .around(CoilRule())
-                    },
-                ),
-        )
+                )
+                    .around(composeTestRule)
+                    .around(CoilRule())
+            },
+        ),
+    )
 }
