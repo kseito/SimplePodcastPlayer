@@ -45,6 +45,12 @@ jobs:
         # for both arm64 and x86_64, and Compose 1.11+'s
         # syncComposeResourcesForIos task fails with
         # "Unknown iOS simulator arch: 'x86_64'".
+        # Compose Multiplatform 1.11 references iOS 18-only UIKit symbols
+        # (e.g. _OBJC_CLASS_$_UIViewLayoutRegion). They are only used at
+        # runtime on iOS 18, but with a 16.0 deployment target the linker
+        # cannot resolve them and fails with
+        # "Undefined symbols for architecture arm64". Tell the linker to
+        # resolve these symbols dynamically (-undefined dynamic_lookup).
         xcodebuild -project iosApp/iosApp.xcodeproj \
           -scheme iosApp \
           -configuration Debug \
@@ -53,4 +59,5 @@ jobs:
           CODE_SIGNING_ALLOWED=NO \
           ARCHS=arm64 \
           ONLY_ACTIVE_ARCH=NO \
+          OTHER_LDFLAGS='$(inherited) -Wl,-U,_OBJC_CLASS_$_UIViewLayoutRegion' \
           build
