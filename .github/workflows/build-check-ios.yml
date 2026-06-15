@@ -40,10 +40,17 @@ jobs:
 
     - name: Build iOS Debug
       run: |
+        # Pin ARCHS to arm64 (macos-latest runners are Apple Silicon).
+        # The "generic/platform=iOS Simulator" destination otherwise builds
+        # for both arm64 and x86_64, and Compose 1.11+'s
+        # syncComposeResourcesForIos task fails with
+        # "Unknown iOS simulator arch: 'x86_64'".
         xcodebuild -project iosApp/iosApp.xcodeproj \
           -scheme iosApp \
           -configuration Debug \
           -destination 'generic/platform=iOS Simulator' \
           -allowProvisioningUpdates \
           CODE_SIGNING_ALLOWED=NO \
+          ARCHS=arm64 \
+          ONLY_ACTIVE_ARCH=NO \
           build
