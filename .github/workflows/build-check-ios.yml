@@ -46,4 +46,7 @@ jobs:
           -destination 'generic/platform=iOS Simulator' \
           -allowProvisioningUpdates \
           CODE_SIGNING_ALLOWED=NO \
+          ARCHS=arm64 \
+          ONLY_ACTIVE_ARCH=NO \
+          OTHER_LDFLAGS='$(inherited) -Wl,-U,_OBJC_CLASS_$_UIViewLayoutRegion' \
           build
