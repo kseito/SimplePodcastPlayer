@@ -10,9 +10,13 @@ jobs:
   claude:
     name: Claude Code
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     # 公開リポジトリのため、信頼できるユーザー（OWNER / MEMBER / COLLABORATOR）の
     # @claude コメントのみ実行する。第三者によるAPIクレジット消費を防ぐガード。
+    # また issue_comment はIssue/PR両方で発火するため、PR上のコメントに限定する。
     if: |
+      (github.event_name == 'pull_request_review_comment' ||
+       (github.event_name == 'issue_comment' && github.event.issue.pull_request)) &&
       contains(github.event.comment.body, '@claude') &&
       (github.event.comment.author_association == 'OWNER' ||
        github.event.comment.author_association == 'MEMBER' ||
