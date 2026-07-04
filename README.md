@@ -7,7 +7,7 @@ A Kotlin Multiplatform project using Compose Multiplatform, targeting Android an
 SimplePodcastPlayer is a cross-platform podcast application built with Kotlin Multiplatform and Compose Multiplatform. The project uses a shared UI approach where most code is in the `commonMain` source set.
 
 ### Requirements Documentation
-- **Requirements specification**: See `document/requirements.md` for detailed functional and technical requirements
+- **Requirements specification**: See `docs/specs/features/requirements.md` for detailed functional and technical requirements
 - **Supported platforms**: Android 14+ (API Level 34) and iOS 16+
 - **Core features**: Podcast search, audio playback, subscription management, playback history
 
@@ -17,9 +17,8 @@ SimplePodcastPlayer is a cross-platform podcast application built with Kotlin Mu
 
 - **Build project**: `./gradlew build`
 - **Clean build**: `./gradlew clean build`
-- **Run Android app**: `./gradlew :composeApp:installDebug` (requires connected device/emulator)
-- **Run tests**: `./gradlew test`
-- **Run tests for specific module**: `./gradlew :composeApp:testDebugUnitTest`
+- **Run Android app**: `./gradlew :androidApp:installDebug` (requires connected device/emulator)
+- **Run tests**: `./gradlew :composeApp:testAndroidHostTest` (shared unit tests; plain `./gradlew test` does not run them under the KMP library plugin)
 
 ### Code Quality
 
@@ -39,41 +38,42 @@ SimplePodcastPlayer is a cross-platform podcast application built with Kotlin Mu
 ### Project Structure
 
 - **Root project**: Contains Gradle configuration and overall project setup
-- **composeApp**: Main module containing multiplatform code
+- **composeApp**: Shared KMP library module containing multiplatform code
   - `commonMain`: Shared code for all platforms (UI, business logic)
-  - `androidMain`: Android-specific implementations and MainActivity
+  - `androidMain`: Android-specific `actual` implementations and Android components reused by shared code (`PlaybackService`, `PlayerActivity`)
   - `iosMain`: iOS-specific implementations and MainViewController
   - `commonTest`: Shared test code
+- **androidApp**: Android application module — entry point (`MainActivity`), `AndroidManifest.xml`, resources/icons, signing/versioning. Depends on `:composeApp`.
 - **iosApp**: iOS native app wrapper (Xcode project)
 
 ### Key Dependencies
 
-- Kotlin 2.2.20 with Compose Multiplatform 1.8.2
+- Kotlin 2.4.0 with Compose Multiplatform 1.11.1
 - Navigation Compose for screen navigation
 - Material3 for UI components
 - Lifecycle ViewModel and Runtime Compose for state management
-- Target: Android SDK 35, minimum SDK 34 (Android 14+)
+- Target: Android SDK 36, minimum SDK 34 (Android 14+)
 - iOS minimum deployment target: iOS 16.0
 
 ### Application Flow
 
-The app follows a simple navigation pattern:
-- `App.kt` sets up NavHost with two destinations: "list" and "search"
-- `PodcastListScreen` displays podcast list with navigation to search
-- `PodcastSearchScreen` provides search functionality with navigation back to list
-- Navigation is handled through lambda callbacks passed between screens
+- `App.kt` sets up a `NavHost` to manage navigation between screens. Destinations include `list`, `search`, `detail`, `list_detail`, `player`, and `in_progress`.
+- `PodcastListScreen` displays the podcast list and navigates to the search, detail, or in-progress episodes screen.
+- `PodcastSearchScreen` provides search functionality and navigates to the detail screen.
+- `PodcastDetailScreen` shows podcast details and episodes, and navigates to the player.
+- Navigation is managed using a `NavController`, with state passed between composables to determine which podcast or episode to display.
 
 ### Platform-Specific Entry Points
 
-- **Android**: `MainActivity.kt` extends ComponentActivity and calls `App()`
+- **Android**: `MainActivity.kt` (in the `androidApp` module) extends ComponentActivity and calls `App()`
 - **iOS**: Uses `MainViewController.kt` to bridge to the shared `App()` composable
 
 ## Testing
 
-- Tests use kotlin-test framework
-- Run all tests: `./gradlew test`
-- Common tests are in `commonTest` source set
-- Currently has basic example test in `ComposeAppCommonTest.kt`
+- Tests use kotlin-test with kotlinx-coroutines-test, Turbine for Flow testing, and Koin for dependency injection
+- Run all tests: `./gradlew :composeApp:testAndroidHostTest`
+- Common tests are in `composeApp/src/commonTest` (utilities, repositories, ViewModels, with fakes in the `fake` package)
+- Test reports are generated in `composeApp/build/reports/tests/`
 
 ## Code Organization
 

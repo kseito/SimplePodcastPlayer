@@ -43,15 +43,15 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 - **iosApp**: iOS native app wrapper (Xcode project)
 
 ### Key Dependencies
-- Kotlin 2.2.0 with Compose Multiplatform 1.8.2
+- Kotlin 2.4.0 with Compose Multiplatform 1.11.1
 - Navigation Compose for screen navigation
 - Material3 for UI components
 - Lifecycle ViewModel and Runtime Compose for state management
-- Target: Android SDK 35, minimum SDK 34 (Android 14+)
+- Target: Android SDK 36, minimum SDK 34 (Android 14+)
 - iOS minimum deployment target: iOS 16.0
 
 ### Application Flow
-- `App.kt` sets up a `NavHost` to manage navigation between screens. Key destinations include `list`, `search`, `detail`, `list_detail`, and `player`.
+- `App.kt` sets up a `NavHost` to manage navigation between screens. Key destinations include `list`, `search`, `detail`, `list_detail`, `player`, and `in_progress`.
 - `PodcastListScreen` displays the podcast list and navigates to the search or detail screen.
 - `PodcastSearchScreen` provides search functionality and navigates to the detail screen.
 - Navigation is managed using a `NavController`, with state passed between composables to determine which podcast or episode to display.
