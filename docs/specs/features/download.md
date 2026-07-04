@@ -18,9 +18,12 @@
 | 状態 | 表示 | タップ時の動作 |
 |---|---|---|
 | 未ダウンロード | ダウンロードアイコン（`Icons.Default.Download`、primary 色） | ダウンロード開始 |
-| ダウンロード中（進捗あり） | 確定的 `CircularProgressIndicator`（24dp） | なし |
-| ダウンロード中（進捗不明） | 不確定 `CircularProgressIndicator`（24dp） | なし |
+| ダウンロード中（`progress > 0f`） | 確定的 `CircularProgressIndicator`（24dp） | なし |
+| ダウンロード中（`progress == 0f`） | 不確定 `CircularProgressIndicator`（24dp） | なし |
 | ダウンロード済み | 削除アイコン（`Icons.Default.Delete`、error 色） | ダウンロード削除 |
+
+進捗不明（開始直後、または `Content-Length` が取得できず進捗が `0f` のまま更新されない場合）は
+不確定インジケーターとして表示される。
 
 ## 状態管理
 
@@ -42,7 +45,7 @@ sealed class DownloadState {
 
 ## クラス構成
 
-```
+```text
 PodcastDetailViewModel ──→ IDownloadRepository（interface, commonMain）
                                    ↑
                             DownloadRepository（expect/actual）
@@ -76,7 +79,7 @@ expect class AudioDownloader {
 - バッファサイズ: 8192 バイト
 - ファイル名: エピソードIDの英数字以外を `_` に置換し `.mp3` を付与（例: `abc-123` → `abc_123.mp3`）
 - 保存ディレクトリ: `podcast_downloads/`（存在しなければ作成）
-- 進捗: `Content-Length` が取得できた場合のみ `Downloading(progress)` を送出
+- 進捗: 開始時に必ず `Downloading(0f)` を送出。以降は `Content-Length` が取得できた場合のみ進捗値を更新送出（取得できない場合は `0f` のままとなり、UI では不確定表示になる）
 - 例外発生時は `Failed(message)` を送出（Flow はエラー終了しない）
 - 実行コンテキスト: `Dispatchers.IO`
 
