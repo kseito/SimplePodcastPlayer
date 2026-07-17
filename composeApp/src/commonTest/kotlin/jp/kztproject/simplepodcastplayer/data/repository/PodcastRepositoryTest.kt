@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class PodcastRepositoryTest {
@@ -103,6 +104,57 @@ class PodcastRepositoryTest {
         val episodes = repository.getEpisodesByPodcastId("999")
 
         assertTrue(episodes.isEmpty())
+    }
+
+    @Test
+    fun saveEpisodes_preservesLocalStateOfExistingEpisodes() = runTest {
+        // Setup: episode with playback progress, listened flag, and download info
+        episodeDao.insert(
+            TestDataFactory.createEpisodeEntity(id = "ep1", podcastId = "1", isDownloaded = true)
+                .copy(lastPlaybackPosition = 120_000L),
+        )
+        episodeDao.insert(
+            TestDataFactory.createEpisodeEntity(id = "ep2", podcastId = "1", listened = true),
+        )
+
+        // Re-save episodes as if refreshed from the API (no local state)
+        repository.saveEpisodes(
+            listOf(
+                TestDataFactory.createEpisode(id = "ep1", podcastId = "1", title = "Updated Episode 1"),
+                TestDataFactory.createEpisode(id = "ep2", podcastId = "1"),
+                TestDataFactory.createEpisode(id = "ep3", podcastId = "1"),
+            ),
+        )
+
+        val ep1 = assertNotNull(episodeDao.getById("ep1"))
+        assertEquals("Updated Episode 1", ep1.title)
+        assertEquals(120_000L, ep1.lastPlaybackPosition)
+        assertTrue(ep1.isDownloaded)
+        assertEquals("/fake/path/ep1.mp3", ep1.localFilePath)
+
+        val ep2 = assertNotNull(episodeDao.getById("ep2"))
+        assertTrue(ep2.listened)
+
+        // New episode is saved with default local state
+        val ep3 = assertNotNull(episodeDao.getById("ep3"))
+        assertEquals(0L, ep3.lastPlaybackPosition)
+        assertFalse(ep3.listened)
+    }
+
+    @Test
+    fun subscribeToPodcast_preservesLocalStateOfExistingEpisodes() = runTest {
+        episodeDao.insert(
+            TestDataFactory.createEpisodeEntity(id = "ep1", podcastId = "1")
+                .copy(lastPlaybackPosition = 60_000L),
+        )
+
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        repository.subscribeToPodcast(
+            podcast,
+            listOf(TestDataFactory.createEpisode(id = "ep1", podcastId = "1")),
+        )
+
+        assertEquals(60_000L, episodeDao.getById("ep1")?.lastPlaybackPosition)
     }
 
     @Test
