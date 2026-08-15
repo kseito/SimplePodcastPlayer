@@ -37,7 +37,7 @@ jobs:
           ref: main
 
       - name: Download PR number
-        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+        uses: dawidd6/action-download-artifact@57aa996fc1713cc1579039614f4645a7f4841fd4 # v23
         with:
           name: pr
           run_id: ${{ github.event.workflow_run.id }}
@@ -49,7 +49,7 @@ jobs:
           echo "pull_request_number=$(cat NR)" >> "$GITHUB_OUTPUT"
 
       - name: Download comparison results
-        uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
+        uses: dawidd6/action-download-artifact@57aa996fc1713cc1579039614f4645a7f4841fd4 # v23
         with:
           run_id: ${{ github.event.workflow_run.id }}
           name: screenshot-diff-reports
