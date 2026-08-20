@@ -4,9 +4,9 @@
 
 1. **ViewModel 作成**: `screen/FooViewModel.kt` に ViewModel と UiState を定義
 2. **Screen 作成**: `screen/FooScreen.kt` に Composable 関数を定義
-3. **ナビゲーション追加**: `App.kt` の `NavHost` に `composable("foo") { ... }` を追加
+3. **ナビゲーション追加**: `navigation/NavigationRoutes.kt` に `@Serializable` な `FooRoute : NavKey` を定義して `navBackStackConfig` にシリアライザを登録し、`App.kt` の `entryProvider` に `entry<FooRoute> { ... }` を追加
 4. **DI 登録**: `di/AppModule.kt` に `viewModel { FooViewModel(...) }` を追加
-5. **遷移元の更新**: 遷移元 Screen のコールバックに `navController.navigate("foo")` を追加
+5. **遷移元の更新**: 遷移元 Screen のコールバックに `backStack.add(FooRoute)` を追加
 6. **テスト作成**: `commonTest/screen/FooViewModelTest.kt` を作成
 7. **Fake 作成**: 必要に応じて `commonTest/fake/` に Fake クラスを追加
 
