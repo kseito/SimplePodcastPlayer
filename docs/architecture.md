@@ -5,7 +5,7 @@
 ```
 composeApp/src/
 ├── commonMain/kotlin/jp/kztproject/simplepodcastplayer/
-│   ├── App.kt                     # エントリポイント、KoinApplication + NavHost
+│   ├── App.kt                     # エントリポイント、KoinApplication + NavDisplay
 │   ├── Platform.kt                # expect/actual 宣言
 │   ├── data/
 │   │   ├── PodcastModels.kt       # Podcast / Episode データクラス
@@ -27,6 +27,8 @@ composeApp/src/
 │   │       └── IDownloadRepository.kt
 │   ├── di/
 │   │   └── AppModule.kt           # Koin モジュール定義
+│   ├── navigation/
+│   │   └── NavigationRoutes.kt    # NavKey ルート定義 + navBackStackConfig
 │   ├── player/
 │   │   └── AudioPlayer.kt         # expect 宣言
 │   ├── download/
@@ -159,20 +161,36 @@ Screen
 
 ## ナビゲーション定義
 
-`App.kt` の `NavHost` でルートを管理する。
+`App.kt` の Navigation 3(`NavDisplay`)でルートを管理する。ルートは `@Serializable` な `NavKey` 実装クラスとして型安全に定義し、画面への引数はルートのプロパティとして渡す。
 
 ```kotlin
-NavHost(navController = navController, startDestination = "list") {
-    composable("list") { PodcastListScreen(...) }
-    composable("search") { PodcastSearchScreen(...) }
-    composable("detail") { /* selectedPodcast.value を参照 */ }
-    composable("player") { /* selectedEpisode.value を参照 */ }
-}
+@Serializable
+private data object PodcastListRoute : NavKey
+
+@Serializable
+private data class PodcastDetailRoute(val podcast: Podcast) : NavKey
+
+val backStack = rememberNavBackStack(navBackStackConfig, PodcastListRoute)
+
+NavDisplay(
+    backStack = backStack,
+    onBack = { backStack.removeLastOrNull() },
+    entryDecorators = listOf(
+        rememberSaveableStateHolderNavEntryDecorator(),
+        rememberViewModelStoreNavEntryDecorator(), // ViewModel をエントリ単位でスコープ
+    ),
+    entryProvider = entryProvider {
+        entry<PodcastListRoute> { PodcastListScreen(...) }
+        entry<PodcastDetailRoute> { key -> PodcastDetailScreen(podcast = key.podcast, ...) }
+    },
+)
 ```
 
-- ルート間のデータ受け渡しは `remember { mutableStateOf<T?>(null) }` で管理
-- 画面遷移は `navController.navigate("route")` / `navController.popBackStack()`
-- 新しい画面を追加する際は `composable("new_route") { ... }` ブロックを追加
+- ルート間のデータ受け渡しはルートクラスのプロパティ(`@Serializable` 必須)
+- 画面遷移は `backStack.add(Route)` / 戻りは `backStack.removeLastOrNull()`
+- 新しい画面を追加する際は `NavKey` 実装ルートを定義し、`entry<NewRoute> { ... }` を追加
+- ルート定義と `navBackStackConfig` は `navigation/NavigationRoutes.kt` に置く
+- iOS などの非 JVM プラットフォームではリフレクションが使えないため、新ルートは `navBackStackConfig`(`SavedStateConfiguration`)にもシリアライザを登録する
 
 ## データベース設定
 
