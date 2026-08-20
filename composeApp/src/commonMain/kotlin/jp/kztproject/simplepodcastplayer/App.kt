@@ -4,15 +4,20 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import jp.kztproject.simplepodcastplayer.data.Episode
-import jp.kztproject.simplepodcastplayer.data.Podcast
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.ui.NavDisplay
 import jp.kztproject.simplepodcastplayer.di.appModule
+import jp.kztproject.simplepodcastplayer.navigation.InProgressEpisodesRoute
+import jp.kztproject.simplepodcastplayer.navigation.PlayerRoute
+import jp.kztproject.simplepodcastplayer.navigation.PodcastDetailRoute
+import jp.kztproject.simplepodcastplayer.navigation.PodcastListRoute
+import jp.kztproject.simplepodcastplayer.navigation.PodcastSearchRoute
+import jp.kztproject.simplepodcastplayer.navigation.SubscribedPodcastDetailRoute
+import jp.kztproject.simplepodcastplayer.navigation.navBackStackConfig
 import jp.kztproject.simplepodcastplayer.screen.InProgressEpisodesScreen
 import jp.kztproject.simplepodcastplayer.screen.PlayerScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastDetailScreen
@@ -37,80 +42,68 @@ fun App() {
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
             ) {
-                val navController = rememberNavController()
-                val selectedPodcast = remember { mutableStateOf<Podcast?>(null) }
-                val selectedPodcastId = remember { mutableStateOf<Long?>(null) }
-                val selectedEpisode = remember { mutableStateOf<Episode?>(null) }
-                val selectedEpisodePodcast = remember { mutableStateOf<Podcast?>(null) }
+                val backStack = rememberNavBackStack(navBackStackConfig, PodcastListRoute)
 
-                NavHost(navController = navController, startDestination = "list") {
-                    composable("list") {
-                        PodcastListScreen(
-                            onNavigateToSearch = { navController.navigate("search") },
-                            onNavigateToInProgress = { navController.navigate("in_progress") },
-                            onPodcastClick = { podcastId ->
-                                selectedPodcastId.value = podcastId
-                                navController.navigate("list_detail")
-                            },
-                        )
-                    }
-                    composable("search") {
-                        PodcastSearchScreen(
-                            onNavigateToList = { navController.navigate("list") },
-                            onNavigateToDetail = { podcast ->
-                                selectedPodcast.value = podcast
-                                navController.navigate("detail")
-                            },
-                        )
-                    }
-                    composable("detail") {
-                        selectedPodcast.value?.let { podcast ->
-                            PodcastDetailScreen(
-                                podcast = podcast,
-                                onNavigateBack = { navController.popBackStack() },
-                                onNavigateToPlayer = { episode, podcastData ->
-                                    selectedEpisode.value = episode
-                                    selectedEpisodePodcast.value = podcastData
-                                    navController.navigate("player")
+                NavDisplay(
+                    backStack = backStack,
+                    onBack = { backStack.removeLastOrNull() },
+                    entryDecorators = listOf(
+                        rememberSaveableStateHolderNavEntryDecorator(),
+                        rememberViewModelStoreNavEntryDecorator(),
+                    ),
+                    entryProvider = entryProvider {
+                        entry<PodcastListRoute> {
+                            PodcastListScreen(
+                                onNavigateToSearch = { backStack.add(PodcastSearchRoute) },
+                                onNavigateToInProgress = { backStack.add(InProgressEpisodesRoute) },
+                                onPodcastClick = { podcastId ->
+                                    backStack.add(SubscribedPodcastDetailRoute(podcastId))
                                 },
                             )
                         }
-                    }
-                    composable("list_detail") {
-                        selectedPodcastId.value?.let { podcastId ->
-                            PodcastDetailScreen(
-                                podcastId = podcastId,
-                                onNavigateBack = { navController.popBackStack() },
-                                onNavigateToPlayer = { episode, podcastData ->
-                                    selectedEpisode.value = episode
-                                    selectedEpisodePodcast.value = podcastData
-                                    navController.navigate("player")
+                        entry<PodcastSearchRoute> {
+                            PodcastSearchScreen(
+                                onNavigateToList = { backStack.add(PodcastListRoute) },
+                                onNavigateToDetail = { podcast ->
+                                    backStack.add(PodcastDetailRoute(podcast))
                                 },
                             )
                         }
-                    }
-                    composable("player") {
-                        selectedEpisode.value?.let { episode ->
-                            selectedEpisodePodcast.value?.let { podcast ->
-                                val viewModel = rememberPlayerViewModel(episode, podcast)
-                                PlayerScreen(
-                                    viewModel = viewModel,
-                                    onNavigateBack = { navController.popBackStack() },
-                                )
-                            }
+                        entry<PodcastDetailRoute> { key ->
+                            PodcastDetailScreen(
+                                podcast = key.podcast,
+                                onNavigateBack = { backStack.removeLastOrNull() },
+                                onNavigateToPlayer = { episode, podcastData ->
+                                    backStack.add(PlayerRoute(episode, podcastData))
+                                },
+                            )
                         }
-                    }
-                    composable("in_progress") {
-                        InProgressEpisodesScreen(
-                            onNavigateBack = { navController.popBackStack() },
-                            onNavigateToPlayer = { episode, podcast ->
-                                selectedEpisode.value = episode
-                                selectedEpisodePodcast.value = podcast
-                                navController.navigate("player")
-                            },
-                        )
-                    }
-                }
+                        entry<SubscribedPodcastDetailRoute> { key ->
+                            PodcastDetailScreen(
+                                podcastId = key.podcastId,
+                                onNavigateBack = { backStack.removeLastOrNull() },
+                                onNavigateToPlayer = { episode, podcastData ->
+                                    backStack.add(PlayerRoute(episode, podcastData))
+                                },
+                            )
+                        }
+                        entry<PlayerRoute> { key ->
+                            val viewModel = rememberPlayerViewModel(key.episode, key.podcast)
+                            PlayerScreen(
+                                viewModel = viewModel,
+                                onNavigateBack = { backStack.removeLastOrNull() },
+                            )
+                        }
+                        entry<InProgressEpisodesRoute> {
+                            InProgressEpisodesScreen(
+                                onNavigateBack = { backStack.removeLastOrNull() },
+                                onNavigateToPlayer = { episode, podcast ->
+                                    backStack.add(PlayerRoute(episode, podcast))
+                                },
+                            )
+                        }
+                    },
+                )
             }
         }
     }
