@@ -44,7 +44,7 @@ SimplePodcastPlayer is a Kotlin Multiplatform project using Compose Multiplatfor
 
 ### Key Dependencies
 - Kotlin 2.4.0 with Compose Multiplatform 1.11.1
-- Navigation 3 (`org.jetbrains.androidx.navigation3:navigation3-ui`) for screen navigation
+- Navigation 3 for screen navigation
 - Material3 for UI components
 - Lifecycle ViewModel and Runtime Compose for state management
 - Target: Android SDK 36, minimum SDK 34 (Android 14+)
