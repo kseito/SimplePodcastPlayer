@@ -165,10 +165,10 @@ Screen
 
 ```kotlin
 @Serializable
-private data object PodcastListRoute : NavKey
+internal data object PodcastListRoute : NavKey
 
 @Serializable
-private data class PodcastDetailRoute(val podcast: Podcast) : NavKey
+internal data class PodcastDetailRoute(val podcast: Podcast) : NavKey
 
 val backStack = rememberNavBackStack(navBackStackConfig, PodcastListRoute)
 
