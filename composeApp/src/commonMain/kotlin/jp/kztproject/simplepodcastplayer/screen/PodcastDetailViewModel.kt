@@ -8,6 +8,7 @@ import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.IAppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
+import jp.kztproject.simplepodcastplayer.data.repository.IDownloadCleanupRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
@@ -22,6 +23,7 @@ import kotlinx.coroutines.launch
 class PodcastDetailViewModel(
     private val podcastRepository: IPodcastRepository,
     private val downloadRepository: IDownloadRepository,
+    private val downloadCleanupRepository: IDownloadCleanupRepository,
     private val appleApiClient: IAppleSearchApiClient,
     private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> },
 ) : ViewModel() {
@@ -54,34 +56,94 @@ class PodcastDetailViewModel(
 
     fun toggleSubscription() {
         val currentState = _uiState.value
-        val podcast = currentState.podcast ?: return
-        val newSubscriptionStatus = !currentState.isSubscribed
+        if (currentState.podcast == null) return
 
-        _uiState.value = currentState.copy(
-            isSubscribed = newSubscriptionStatus,
-            isSubscriptionLoading = true,
-        )
+        if (currentState.isSubscribed) {
+            requestUnsubscribe()
+        } else {
+            subscribe()
+        }
+    }
+
+    private fun subscribe() {
+        val podcast = _uiState.value.podcast ?: return
+
+        _uiState.update { it.copy(isSubscribed = true, isSubscriptionLoading = true) }
 
         viewModelScope.launch {
             try {
-                if (newSubscriptionStatus) {
-                    // Subscribe: Save podcast and episodes to database
-                    podcastRepository.subscribeToPodcast(podcast, loadedEpisodes)
-                } else {
-                    // Unsubscribe: Update subscription status
-                    podcastRepository.unsubscribeFromPodcast(podcast.trackId)
-                }
-
-                _uiState.value = _uiState.value.copy(
-                    isSubscriptionLoading = false,
-                )
+                podcastRepository.subscribeToPodcast(podcast, loadedEpisodes)
+                _uiState.update { it.copy(isSubscriptionLoading = false) }
             } catch (e: Exception) {
                 Napier.e("Failed to update subscription", e)
-                _uiState.value = _uiState.value.copy(
-                    isSubscribed = !newSubscriptionStatus,
-                    isSubscriptionLoading = false,
-                    error = "Failed to update subscription",
-                )
+                _uiState.update {
+                    it.copy(
+                        isSubscribed = false,
+                        isSubscriptionLoading = false,
+                        error = "Failed to update subscription",
+                    )
+                }
+            }
+        }
+    }
+
+    /**
+     * Unsubscribing discards the downloaded files of this podcast, so ask for confirmation first.
+     * Skips the dialog when there is nothing downloaded.
+     */
+    private fun requestUnsubscribe() {
+        val podcast = _uiState.value.podcast ?: return
+
+        viewModelScope.launch {
+            val downloadCount = runCatching {
+                downloadCleanupRepository.countDownloadsByPodcast(podcast.trackId.toString())
+            }.onFailure {
+                Napier.e("Failed to count downloads", it)
+            }.getOrDefault(0)
+
+            if (downloadCount > 0) {
+                _uiState.update { it.copy(unsubscribeConfirmDownloadCount = downloadCount) }
+            } else {
+                unsubscribe()
+            }
+        }
+    }
+
+    fun confirmUnsubscribe() {
+        _uiState.update { it.copy(unsubscribeConfirmDownloadCount = null) }
+        unsubscribe()
+    }
+
+    fun dismissUnsubscribeConfirm() {
+        _uiState.update { it.copy(unsubscribeConfirmDownloadCount = null) }
+    }
+
+    private fun unsubscribe() {
+        val podcast = _uiState.value.podcast ?: return
+
+        _uiState.update { it.copy(isSubscribed = false, isSubscriptionLoading = true) }
+
+        viewModelScope.launch {
+            try {
+                downloadCleanupRepository.deleteDownloadsByPodcast(podcast.trackId.toString())
+                podcastRepository.unsubscribeFromPodcast(podcast.trackId)
+
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        isSubscriptionLoading = false,
+                        episodes = currentState.episodes.map { it.copy(isDownloaded = false) },
+                        downloadStates = emptyMap(),
+                    )
+                }
+            } catch (e: Exception) {
+                Napier.e("Failed to update subscription", e)
+                _uiState.update {
+                    it.copy(
+                        isSubscribed = true,
+                        isSubscriptionLoading = false,
+                        error = "Failed to update subscription",
+                    )
+                }
             }
         }
     }
@@ -358,4 +420,6 @@ data class PodcastDetailUiState(
     val isSubscriptionLoading: Boolean = false,
     val error: String? = null,
     val downloadStates: Map<String, DownloadState> = emptyMap(),
+    /** Number of downloads that unsubscribing would delete. null hides the confirmation dialog. */
+    val unsubscribeConfirmDownloadCount: Int? = null,
 )
