@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -151,11 +152,40 @@ private fun PodcastDetailScreenScaffold(
 
     Box {
         content(uiState)
+
+        uiState.unsubscribeConfirmDownloadCount?.let { downloadCount ->
+            UnsubscribeConfirmDialog(
+                downloadCount = downloadCount,
+                onConfirm = viewModel::confirmUnsubscribe,
+                onDismiss = viewModel::dismissUnsubscribeConfirm,
+            )
+        }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+}
+
+@Composable
+private fun UnsubscribeConfirmDialog(downloadCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val episodeLabel = if (downloadCount == 1) "episode" else "episodes"
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Unsubscribe") },
+        text = { Text("$downloadCount downloaded $episodeLabel will also be deleted.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Unsubscribe")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 private data class PodcastDetailState(
