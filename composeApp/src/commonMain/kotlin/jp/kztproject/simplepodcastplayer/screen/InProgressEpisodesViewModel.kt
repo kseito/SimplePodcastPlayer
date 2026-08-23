@@ -31,7 +31,9 @@ class InProgressEpisodesViewModel(
             playbackRepository.getInProgressEpisodes().collect { entities ->
                 val items = entities.mapNotNull { entity ->
                     val podcastId = entity.podcastId.toLongOrNull() ?: return@mapNotNull null
-                    val podcastEntity = podcastRepository.getPodcast(podcastId) ?: return@mapNotNull null
+                    // Episodes of unsubscribed podcasts stay in the DB, but should not be listed here
+                    val podcastEntity = podcastRepository.getPodcast(podcastId)
+                        ?.takeIf { it.subscribed } ?: return@mapNotNull null
                     entity.toUiItem(podcastEntity)
                 }
                 _uiState.value = InProgressEpisodesUiState(isLoading = false, episodes = items)
