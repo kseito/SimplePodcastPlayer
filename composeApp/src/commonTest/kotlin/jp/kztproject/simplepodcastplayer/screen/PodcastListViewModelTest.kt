@@ -5,9 +5,9 @@ import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
-import jp.kztproject.simplepodcastplayer.data.repository.DownloadCleanupRepository
+import jp.kztproject.simplepodcastplayer.data.repository.EpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
-import jp.kztproject.simplepodcastplayer.fake.FakeDownloadRepository
+import jp.kztproject.simplepodcastplayer.fake.FakeAudioDownloader
 import jp.kztproject.simplepodcastplayer.fake.FakeEpisodeDao
 import jp.kztproject.simplepodcastplayer.fake.FakePodcastDao
 import jp.kztproject.simplepodcastplayer.fake.TestDataFactory
@@ -27,8 +27,8 @@ class PodcastListViewModelTest {
     private lateinit var podcastDao: FakePodcastDao
     private lateinit var episodeDao: FakeEpisodeDao
     private lateinit var repository: PodcastRepository
-    private lateinit var downloadRepository: FakeDownloadRepository
-    private lateinit var cleanupRepository: DownloadCleanupRepository
+    private lateinit var audioDownloader: FakeAudioDownloader
+    private lateinit var episodeAudioRepository: EpisodeAudioRepository
     private lateinit var viewModel: PodcastListViewModel
 
     @BeforeTest
@@ -37,8 +37,8 @@ class PodcastListViewModelTest {
         podcastDao = FakePodcastDao()
         episodeDao = FakeEpisodeDao()
         repository = PodcastRepository(podcastDao, episodeDao)
-        downloadRepository = FakeDownloadRepository(episodeDao)
-        cleanupRepository = DownloadCleanupRepository(episodeDao, downloadRepository)
+        audioDownloader = FakeAudioDownloader()
+        episodeAudioRepository = EpisodeAudioRepository(audioDownloader, episodeDao)
     }
 
     @AfterTest
@@ -48,7 +48,7 @@ class PodcastListViewModelTest {
 
     @Test
     fun initialState_isLoading() = runTest {
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
 
         viewModel.uiState.test {
             val state = awaitItem()
@@ -66,7 +66,7 @@ class PodcastListViewModelTest {
         repository.subscribeToPodcast(podcast1, emptyList())
         repository.subscribeToPodcast(podcast2, emptyList())
 
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
 
         viewModel.uiState.test {
             // Skip initial loading state and get the updated state
@@ -83,7 +83,7 @@ class PodcastListViewModelTest {
 
     @Test
     fun loadSubscribedPodcasts_emptyList_updatesUiState() = runTest {
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
 
         viewModel.uiState.test {
             testDispatcher.scheduler.advanceUntilIdle()
@@ -98,7 +98,7 @@ class PodcastListViewModelTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L, trackName = "Test Podcast")
         repository.subscribeToPodcast(podcast, emptyList())
 
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
 
         viewModel.uiState.test {
             testDispatcher.scheduler.advanceUntilIdle()
@@ -111,7 +111,7 @@ class PodcastListViewModelTest {
 
     @Test
     fun getPodcastById_nonExistingPodcast_returnsNull() = runTest {
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
 
         viewModel.uiState.test {
             testDispatcher.scheduler.advanceUntilIdle()
@@ -122,57 +122,57 @@ class PodcastListViewModelTest {
     }
 
     @Test
-    fun requestCleanupListenedDownloads_listenedDownloadsExist_showsDialogWithCount() = runTest {
+    fun requestCleanupListenedAudioFiles_listenedDownloadsExist_showsDialogWithCount() = runTest {
         // Two listened downloads, plus one downloaded but unlistened, plus one listened but not downloaded
         setupEpisode(id = "ep1", listened = true, isDownloaded = true)
         setupEpisode(id = "ep2", listened = true, isDownloaded = true)
         setupEpisode(id = "ep3", listened = false, isDownloaded = true)
         setupEpisode(id = "ep4", listened = true, isDownloaded = false)
 
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
-        viewModel.requestCleanupListenedDownloads()
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
+        viewModel.requestCleanupListenedAudioFiles()
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            state.cleanupConfirmDownloadCount shouldBe 2
+            state.cleanupConfirmAudioFileCount shouldBe 2
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun requestCleanupListenedDownloads_noListenedDownloads_showsDialogWithZero() = runTest {
+    fun requestCleanupListenedAudioFiles_noListenedDownloads_showsDialogWithZero() = runTest {
         setupEpisode(id = "ep1", listened = false, isDownloaded = true)
 
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
-        viewModel.requestCleanupListenedDownloads()
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
+        viewModel.requestCleanupListenedAudioFiles()
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            state.cleanupConfirmDownloadCount shouldBe 0
+            state.cleanupConfirmAudioFileCount shouldBe 0
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun confirmCleanupListenedDownloads_deletesOnlyListenedDownloads() = runTest {
+    fun confirmCleanupListenedAudioFiles_deletesOnlyListenedDownloads() = runTest {
         setupEpisode(id = "ep1", listened = true, isDownloaded = true)
         setupEpisode(id = "ep2", listened = false, isDownloaded = true)
 
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
-        viewModel.confirmCleanupListenedDownloads()
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
+        viewModel.confirmCleanupListenedAudioFiles()
         testDispatcher.scheduler.advanceUntilIdle()
 
         // The listened episode's file is gone, the unlistened one is kept
-        downloadRepository.isDownloaded("ep1") shouldBe false
-        downloadRepository.isDownloaded("ep2") shouldBe true
+        episodeAudioRepository.isDownloaded("ep1") shouldBe false
+        episodeAudioRepository.isDownloaded("ep2") shouldBe true
         episodeDao.getById("ep1")!!.isDownloaded shouldBe false
         episodeDao.getById("ep2")!!.isDownloaded shouldBe true
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            state.cleanupConfirmDownloadCount.shouldBeNull()
+            state.cleanupConfirmAudioFileCount.shouldBeNull()
             state.isCleaningUp shouldBe false
             state.cleanupMessage shouldBe "Deleted 1 download"
             cancelAndIgnoreRemainingEvents()
@@ -183,16 +183,16 @@ class PodcastListViewModelTest {
     fun dismissCleanupConfirm_keepsDownloads() = runTest {
         setupEpisode(id = "ep1", listened = true, isDownloaded = true)
 
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
-        viewModel.requestCleanupListenedDownloads()
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
+        viewModel.requestCleanupListenedAudioFiles()
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.dismissCleanupConfirm()
 
-        downloadRepository.isDownloaded("ep1") shouldBe true
+        episodeAudioRepository.isDownloaded("ep1") shouldBe true
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            state.cleanupConfirmDownloadCount.shouldBeNull()
+            state.cleanupConfirmAudioFileCount.shouldBeNull()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -202,13 +202,13 @@ class PodcastListViewModelTest {
             TestDataFactory.createEpisodeEntity(id = id, listened = listened, isDownloaded = isDownloaded),
         )
         if (isDownloaded) {
-            downloadRepository.setDownloadedEpisode(id, "/fake/path/$id.mp3")
+            audioDownloader.setDownloadedEpisode(id, "/fake/path/$id.mp3")
         }
     }
 
     @Test
     fun uiStateUpdates_whenRepositoryChanges() = runTest {
-        viewModel = PodcastListViewModel(repository, cleanupRepository)
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.uiState.test {
