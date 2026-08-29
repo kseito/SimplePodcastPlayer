@@ -15,7 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.media3.exoplayer.ExoPlayer
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IEpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.service.PlaybackService
 import org.koin.compose.koinInject
@@ -24,7 +24,7 @@ import org.koin.compose.koinInject
 actual fun rememberPlayerViewModel(episode: Episode, podcast: Podcast): PlayerViewModel {
     val context = LocalContext.current
     val playbackRepository = koinInject<IPlaybackRepository>()
-    val downloadRepository = koinInject<IDownloadRepository>()
+    val episodeAudioRepository = koinInject<IEpisodeAudioRepository>()
     var viewModel by remember { mutableStateOf<PlayerViewModel?>(null) }
     var playbackService by remember { mutableStateOf<PlaybackService?>(null) }
 
@@ -36,7 +36,7 @@ actual fun rememberPlayerViewModel(episode: Episode, podcast: Podcast): PlayerVi
 
                 binder?.getService()?.let { svc ->
                     val exoPlayer = svc.getPlayer() as ExoPlayer
-                    val vm = PlayerViewModelImpl(exoPlayer, playbackRepository, downloadRepository)
+                    val vm = PlayerViewModelImpl(exoPlayer, playbackRepository, episodeAudioRepository)
                     vm.loadEpisode(episode, podcast)
                     viewModel = vm
                 }
