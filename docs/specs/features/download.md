@@ -20,7 +20,7 @@
 | 未ダウンロード | ダウンロードアイコン（`Icons.Default.Download`、primary 色） | ダウンロード開始 |
 | ダウンロード中（`progress > 0f`） | 確定的 `CircularProgressIndicator`（24dp） | なし |
 | ダウンロード中（`progress == 0f`） | 不確定 `CircularProgressIndicator`（24dp） | なし |
-| ダウンロード済み | 削除アイコン（`Icons.Default.Delete`、error 色） | ダウンロード削除 |
+| ダウンロード済み | 削除アイコン（`Icons.Default.Delete`、error 色） | 音声ファイル削除 |
 
 進捗不明（開始直後、または `Content-Length` が取得できず進捗が `0f` のまま更新されない場合）は
 不確定インジケーターとして表示される。
@@ -38,7 +38,7 @@
 | ダウンロード済みが 1 件以上 | 確認ダイアログ「N downloaded episode(s) will also be deleted.」を表示。[Unsubscribe] で削除 + 購読解除、[Cancel] で何もしない |
 | ダウンロード済みが 0 件 | ダイアログを出さず即座に購読解除 |
 
-- 確認前は購読状態・ファイルとも一切変更しない（`PodcastDetailUiState.unsubscribeConfirmDownloadCount` が null 以外の間はダイアログ表示中）
+- 確認前は購読状態・ファイルとも一切変更しない（`PodcastDetailUiState.unsubscribeConfirmAudioFileCount` が null 以外の間はダイアログ表示中）
 - 削除するのはファイルとダウンロード状態のみ。**エピソードのレコードは残す**ため、再購読時に再生位置と聴取済みフラグが復活する
 - 購読解除済みポッドキャストのエピソードは `InProgressEpisodesScreen` に表示しない（`subscribed` で除外）
 
@@ -76,34 +76,34 @@ sealed class DownloadState {
 ## クラス構成
 
 ```text
-PodcastDetailViewModel ──→ IDownloadRepository（interface, commonMain）
-PodcastListViewModel  ──┐          ↑
-                        │   DownloadRepository（expect/actual）
-                        │          │ 委譲
-                        │   AudioDownloader（expect/actual）
-                        │          │
-                        │   EpisodeDao.updateDownloadStatus()
-                        │
-                        └─→ IDownloadCleanupRepository（commonMain）
-                                   │ 対象を EpisodeDao で抽出し
-                                   └─→ IDownloadRepository.deleteDownload() を反復
+PodcastDetailViewModel ──┐
+PodcastListViewModel  ───┴─→ IEpisodeAudioRepository（interface, commonMain）
+BasePlayerViewModel   ──────→          ↑
+                             EpisodeAudioRepository（commonMain の通常クラス）
+                                       │ 削除対象の抽出・DB 更新はここに集約
+                                       ├─→ EpisodeDao
+                                       └─→ IAudioDownloader（プラットフォーム実装）
 ```
 
 | クラス | 役割 |
 |---|---|
-| `IDownloadRepository` | リポジトリのインターフェース。テスト時は `FakeDownloadRepository` に差し替え |
-| `DownloadCleanupRepository` | 一括削除。削除条件を共通化するため commonMain の通常クラスとして実装し、ファイル削除は `IDownloadRepository` に委譲する |
-| `DownloadRepository` | ダウンロード実行と DB 更新の統合。`expect class` で各プラットフォームに actual 実装 |
-| `DownloadRepositoryBuilder` | `expect object`。プラットフォームごとの `DownloadRepository` 生成（Android は `Context` が必要） |
-| `AudioDownloader` | `expect class`。HTTP ダウンロードとファイル操作の実体 |
+| `IEpisodeAudioRepository` | エピソード音声ファイルの取得・参照・削除（単体 / 一括）のインターフェース |
+| `EpisodeAudioRepository` | 実体。ファイル操作を `IAudioDownloader` に委譲し、`EpisodeDao` のダウンロード列と同期させる。プラットフォーム差分を持たないため commonMain の通常クラス |
+| `EpisodeAudioRepositoryBuilder` | `expect object`。プラットフォームごとの `AudioDownloader` と `EpisodeDao` を組み立てて生成（Android は `Context` が必要） |
+| `IAudioDownloader` | HTTP ダウンロードとファイル操作のインターフェース。テスト時は `FakeAudioDownloader` に差し替え |
+| `AudioDownloader` | `IAudioDownloader` の Android / iOS 実装 |
 
-### AudioDownloader API
+名前について: `Download` を名詞として使うと「ダウンロード処理」と「保存済みの音声ファイル」のどちらを指すか曖昧になるため、
+リポジトリ層は `AudioFile` を用いる。動詞としての `downloadEpisode` / `DownloadState` と、
+DB カラムの `isDownloaded` / `downloadedAt` / `localFilePath` はそのまま。
+
+### IAudioDownloader API
 
 ```kotlin
-expect class AudioDownloader {
+interface IAudioDownloader {
     suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState>
-    fun getLocalFilePath(episodeId: String): String?
-    suspend fun deleteDownload(episodeId: String): Boolean
+    fun getAudioFilePath(episodeId: String): String?
+    suspend fun deleteAudioFile(episodeId: String): Boolean
     fun isDownloaded(episodeId: String): Boolean
 }
 ```
@@ -129,7 +129,7 @@ expect class AudioDownloader {
 
 ## データベース連携
 
-`DownloadRepository` が `DownloadState.Completed` を検知した時点で `EpisodeDao.updateDownloadStatus()` を呼び、Episode テーブルを更新する。
+`EpisodeAudioRepository` が `DownloadState.Completed` を検知した時点で `EpisodeDao.updateDownloadStatus()` を呼び、Episode テーブルを更新する。
 
 | カラム | ダウンロード完了時 | 削除時 |
 |---|---|---|
@@ -139,7 +139,7 @@ expect class AudioDownloader {
 
 ## オフライン再生との連携
 
-`BasePlayerViewModel` は再生開始時に `downloadRepository.getLocalFilePath(episode.id)` を確認し、
+`BasePlayerViewModel` は再生開始時に `episodeAudioRepository.getAudioFilePath(episode.id)` を確認し、
 ローカルファイルが存在すればそのパスを、なければ `episode.audioUrl`（ストリーミング）を再生する。
 
 ## エラー処理
@@ -150,8 +150,8 @@ expect class AudioDownloader {
 
 ## テスト
 
-- `FakeDownloadRepository`（commonTest の `fake` パッケージ）で `IDownloadRepository` を差し替え
-  - コンストラクタに `EpisodeDao` を渡すと、本物と同じくダウンロード状態を DB へ書き戻す（DB 状態を検証するテスト向け）
+- `FakeAudioDownloader`（commonTest の `fake` パッケージ）で `IAudioDownloader` のみを差し替え、
+  リポジトリは本物の `EpisodeAudioRepository` を使う。DB への書き戻しを Fake 側で再現する必要がない
+- `EpisodeAudioRepositoryTest` で DB 同期（ダウンロード完了 / 削除）と削除対象の抽出条件（ポッドキャスト単位 / 聴取済み）を検証
 - `PodcastDetailViewModelTest` でダウンロード開始・完了・失敗・削除の状態遷移と、購読解除の確認 / 実行 / キャンセルを検証
 - `PodcastListViewModelTest` で聴取済み一括削除の件数集計・削除・キャンセルを検証
-- `DownloadCleanupRepositoryTest` で削除対象の抽出条件（ポッドキャスト単位 / 聴取済み）を検証
