@@ -23,8 +23,9 @@ composeApp/src/
 │   │       ├── PodcastRepository.kt
 │   │       ├── IPodcastRepository.kt
 │   │       ├── PlaybackRepository.kt
-│   │       ├── DownloadRepository.kt（expect）
-│   │       └── IDownloadRepository.kt
+│   │       ├── EpisodeAudioRepository.kt
+│   │       ├── IEpisodeAudioRepository.kt
+│   │       └── EpisodeAudioRepositoryBuilder.kt（expect）
 │   ├── di/
 │   │   └── AppModule.kt           # Koin モジュール定義
 │   ├── navigation/
@@ -32,7 +33,7 @@ composeApp/src/
 │   ├── player/
 │   │   └── AudioPlayer.kt         # expect 宣言
 │   ├── download/
-│   │   ├── AudioDownloader.kt     # expect 宣言
+│   │   ├── IAudioDownloader.kt    # プラットフォーム実装のインターフェース
 │   │   └── DownloadState.kt
 │   ├── screen/
 │   │   ├── PodcastListScreen.kt
@@ -121,7 +122,7 @@ val appModule = module {
 
     // Repository（singleton）
     single<IPodcastRepository> { PodcastRepository(get(), get()) }
-    factory<IDownloadRepository> { DownloadRepositoryBuilder.build() }
+    single<IEpisodeAudioRepository> { EpisodeAudioRepositoryBuilder.build() }
 
     // Services（factory）
     factory<IAppleSearchApiClient> { AppleSearchApiClient() }
