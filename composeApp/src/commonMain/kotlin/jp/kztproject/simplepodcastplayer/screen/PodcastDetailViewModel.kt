@@ -8,8 +8,7 @@ import jp.kztproject.simplepodcastplayer.data.EpisodeDisplayModel
 import jp.kztproject.simplepodcastplayer.data.IAppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadCleanupRepository
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IEpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.util.toDisplayModel
@@ -22,8 +21,7 @@ import kotlinx.coroutines.launch
 
 class PodcastDetailViewModel(
     private val podcastRepository: IPodcastRepository,
-    private val downloadRepository: IDownloadRepository,
-    private val downloadCleanupRepository: IDownloadCleanupRepository,
+    private val episodeAudioRepository: IEpisodeAudioRepository,
     private val appleApiClient: IAppleSearchApiClient,
     private val onNavigateToPlayer: (Episode, Podcast) -> Unit = { _, _ -> },
 ) : ViewModel() {
@@ -89,20 +87,20 @@ class PodcastDetailViewModel(
 
     /**
      * Unsubscribing discards the downloaded files of this podcast, so ask for confirmation first.
-     * Skips the dialog when there is nothing downloaded.
+     * Skips the dialog when the podcast holds no audio files.
      */
     private fun requestUnsubscribe() {
         val podcast = _uiState.value.podcast ?: return
 
         viewModelScope.launch {
-            val downloadCount = runCatching {
-                downloadCleanupRepository.countDownloadsByPodcast(podcast.trackId.toString())
+            val audioFileCount = runCatching {
+                episodeAudioRepository.countAudioFilesByPodcast(podcast.trackId.toString())
             }.onFailure {
-                Napier.e("Failed to count downloads", it)
+                Napier.e("Failed to count audio files", it)
             }.getOrDefault(0)
 
-            if (downloadCount > 0) {
-                _uiState.update { it.copy(unsubscribeConfirmDownloadCount = downloadCount) }
+            if (audioFileCount > 0) {
+                _uiState.update { it.copy(unsubscribeConfirmAudioFileCount = audioFileCount) }
             } else {
                 unsubscribe()
             }
@@ -110,12 +108,12 @@ class PodcastDetailViewModel(
     }
 
     fun confirmUnsubscribe() {
-        _uiState.update { it.copy(unsubscribeConfirmDownloadCount = null) }
+        _uiState.update { it.copy(unsubscribeConfirmAudioFileCount = null) }
         unsubscribe()
     }
 
     fun dismissUnsubscribeConfirm() {
-        _uiState.update { it.copy(unsubscribeConfirmDownloadCount = null) }
+        _uiState.update { it.copy(unsubscribeConfirmAudioFileCount = null) }
     }
 
     private fun unsubscribe() {
@@ -125,7 +123,7 @@ class PodcastDetailViewModel(
 
         viewModelScope.launch {
             try {
-                downloadCleanupRepository.deleteDownloadsByPodcast(podcast.trackId.toString())
+                episodeAudioRepository.deleteAudioFilesByPodcast(podcast.trackId.toString())
                 podcastRepository.unsubscribeFromPodcast(podcast.trackId)
 
                 _uiState.update { currentState ->
@@ -251,7 +249,7 @@ class PodcastDetailViewModel(
         loadedEpisodes = episodes
         return episodes
             .map { episode ->
-                val isDownloaded = downloadRepository.isDownloaded(episode.id)
+                val isDownloaded = episodeAudioRepository.isDownloaded(episode.id)
                 episode.toDisplayModel(isDownloaded)
             }
     }
@@ -289,7 +287,7 @@ class PodcastDetailViewModel(
 
             return parsedEpisodes
                 .map { parsedEpisode ->
-                    val isDownloaded = downloadRepository.isDownloaded(parsedEpisode.id)
+                    val isDownloaded = episodeAudioRepository.isDownloaded(parsedEpisode.id)
                     parsedEpisode.toDisplayModel(isDownloaded)
                 }
                 .sortedByDescending { it.trackId }
@@ -314,7 +312,7 @@ class PodcastDetailViewModel(
 
         viewModelScope.launch {
             try {
-                downloadRepository.downloadEpisode(episodeId, episode.audioUrl).collect { state ->
+                episodeAudioRepository.downloadEpisode(episodeId, episode.audioUrl).collect { state ->
                     Napier.d("Download state update: $state")
 
                     _uiState.update { currentState ->
@@ -364,10 +362,10 @@ class PodcastDetailViewModel(
         }
     }
 
-    fun deleteDownload(episodeId: String) {
+    fun deleteAudioFile(episodeId: String) {
         viewModelScope.launch {
             try {
-                val deleted = downloadRepository.deleteDownload(episodeId)
+                val deleted = episodeAudioRepository.deleteAudioFile(episodeId)
                 _uiState.update { currentState ->
                     if (deleted) {
                         val updatedDownloadStates = currentState.downloadStates.toMutableMap()
@@ -421,5 +419,5 @@ data class PodcastDetailUiState(
     val error: String? = null,
     val downloadStates: Map<String, DownloadState> = emptyMap(),
     /** Number of downloads that unsubscribing would delete. null hides the confirmation dialog. */
-    val unsubscribeConfirmDownloadCount: Int? = null,
+    val unsubscribeConfirmAudioFileCount: Int? = null,
 )
