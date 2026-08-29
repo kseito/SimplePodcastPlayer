@@ -62,8 +62,8 @@ fun PodcastListScreen(
             onNavigateToSearch = onNavigateToSearch,
             onNavigateToInProgress = onNavigateToInProgress,
             onPodcastClick = onPodcastClick,
-            onCleanupClick = viewModel::requestCleanupListenedDownloads,
-            onCleanupConfirm = viewModel::confirmCleanupListenedDownloads,
+            onCleanupClick = viewModel::requestCleanupListenedAudioFiles,
+            onCleanupConfirm = viewModel::confirmCleanupListenedAudioFiles,
             onCleanupDismiss = viewModel::dismissCleanupConfirm,
             onCleanupMessageShown = viewModel::clearCleanupMessage,
         ),
@@ -94,9 +94,9 @@ private fun PodcastListContent(uiState: PodcastListUiState, actions: PodcastList
     Box(modifier = Modifier.fillMaxSize()) {
         PodcastListBody(uiState = uiState, actions = actions)
 
-        uiState.cleanupConfirmDownloadCount?.let { downloadCount ->
+        uiState.cleanupConfirmAudioFileCount?.let { audioFileCount ->
             CleanupConfirmDialog(
-                downloadCount = downloadCount,
+                audioFileCount = audioFileCount,
                 onConfirm = actions.onCleanupConfirm,
                 onDismiss = actions.onCleanupDismiss,
             )
@@ -110,9 +110,9 @@ private fun PodcastListContent(uiState: PodcastListUiState, actions: PodcastList
 }
 
 @Composable
-private fun CleanupConfirmDialog(downloadCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val hasDownloads = downloadCount > 0
-    val episodeLabel = if (downloadCount == 1) "episode" else "episodes"
+private fun CleanupConfirmDialog(audioFileCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val hasDownloads = audioFileCount > 0
+    val episodeLabel = if (audioFileCount == 1) "episode" else "episodes"
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -120,7 +120,7 @@ private fun CleanupConfirmDialog(downloadCount: Int, onConfirm: () -> Unit, onDi
         text = {
             Text(
                 if (hasDownloads) {
-                    "Delete the downloaded audio of $downloadCount listened $episodeLabel?"
+                    "Delete the downloaded audio of $audioFileCount listened $episodeLabel?"
                 } else {
                     "There are no listened downloads to delete."
                 },
