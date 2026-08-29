@@ -1,6 +1,10 @@
 package jp.kztproject.simplepodcastplayer.screen
 
 import app.cash.turbine.test
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.PodcastLookupResponse
@@ -21,11 +25,6 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PodcastDetailViewModelTest {
@@ -106,11 +105,11 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isSubscribed)
-            assertFalse(state.isLoading)
-            assertEquals(2, state.episodes.size)
-            assertEquals("Episode 2", state.episodes[0].title) // Sorted by trackId DESC
-            assertEquals("Episode 1", state.episodes[1].title)
+            state.isSubscribed shouldBe false
+            state.isLoading shouldBe false
+            state.episodes.size shouldBe 2
+            state.episodes[0].title shouldBe "Episode 2" // Sorted by trackId DESC
+            state.episodes[1].title shouldBe "Episode 1"
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -129,11 +128,11 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertTrue(state.isSubscribed)
-            assertFalse(state.isLoading)
-            assertEquals(2, state.episodes.size)
-            assertEquals("DB Episode 1", state.episodes[0].title)
-            assertEquals("DB Episode 2", state.episodes[1].title)
+            state.isSubscribed shouldBe true
+            state.isLoading shouldBe false
+            state.episodes.size shouldBe 2
+            state.episodes[0].title shouldBe "DB Episode 1"
+            state.episodes[1].title shouldBe "DB Episode 2"
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -148,9 +147,9 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isLoading)
-            assertNotNull(state.error)
-            assertTrue(state.episodes.isEmpty())
+            state.isLoading shouldBe false
+            state.error.shouldNotBeNull()
+            state.episodes.shouldBeEmpty()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -185,13 +184,13 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertTrue(state.isSubscribed)
-            assertFalse(state.isSubscriptionLoading)
+            state.isSubscribed shouldBe true
+            state.isSubscriptionLoading shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
 
         // Verify saved in repository
-        assertTrue(repository.isSubscribed(1L))
+        repository.isSubscribed(1L) shouldBe true
     }
 
     @Test
@@ -208,13 +207,13 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isSubscribed)
-            assertFalse(state.isSubscriptionLoading)
+            state.isSubscribed shouldBe false
+            state.isSubscriptionLoading shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
 
         // Verify unsubscribed in repository
-        assertFalse(repository.isSubscribed(1L))
+        repository.isSubscribed(1L) shouldBe false
     }
 
     @Test
@@ -229,14 +228,14 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            assertEquals(1, state.unsubscribeConfirmDownloadCount)
+            state.unsubscribeConfirmDownloadCount shouldBe 1
             // Nothing happens until the user confirms
-            assertTrue(state.isSubscribed)
+            state.isSubscribed shouldBe true
             cancelAndIgnoreRemainingEvents()
         }
 
-        assertTrue(repository.isSubscribed(1L))
-        assertTrue(downloadRepository.isDownloaded("ep1"))
+        repository.isSubscribed(1L) shouldBe true
+        downloadRepository.isDownloaded("ep1") shouldBe true
     }
 
     @Test
@@ -253,16 +252,16 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            assertNull(state.unsubscribeConfirmDownloadCount)
-            assertFalse(state.isSubscribed)
-            assertFalse(state.isSubscriptionLoading)
-            assertTrue(state.episodes.none { it.isDownloaded })
+            state.unsubscribeConfirmDownloadCount.shouldBeNull()
+            state.isSubscribed shouldBe false
+            state.isSubscriptionLoading shouldBe false
+            state.episodes.none { it.isDownloaded } shouldBe true
             cancelAndIgnoreRemainingEvents()
         }
 
-        assertFalse(repository.isSubscribed(1L))
-        assertFalse(downloadRepository.isDownloaded("ep1"))
-        assertFalse(episodeDao.getById("ep1")!!.isDownloaded)
+        repository.isSubscribed(1L) shouldBe false
+        downloadRepository.isDownloaded("ep1") shouldBe false
+        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
     }
 
     @Test
@@ -279,13 +278,13 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            assertNull(state.unsubscribeConfirmDownloadCount)
-            assertTrue(state.isSubscribed)
+            state.unsubscribeConfirmDownloadCount.shouldBeNull()
+            state.isSubscribed shouldBe true
             cancelAndIgnoreRemainingEvents()
         }
 
-        assertTrue(repository.isSubscribed(1L))
-        assertTrue(downloadRepository.isDownloaded("ep1"))
+        repository.isSubscribed(1L) shouldBe true
+        downloadRepository.isDownloaded("ep1") shouldBe true
     }
 
     private suspend fun subscribeWithDownloadedEpisode(): Podcast {
@@ -330,10 +329,10 @@ class PodcastDetailViewModelTest {
         viewModel.playEpisode("ep1")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertNotNull(navigatedEpisode)
-        assertNotNull(navigatedPodcast)
-        assertEquals("ep1", navigatedEpisode?.id)
-        assertEquals(1L, navigatedPodcast?.trackId)
+        navigatedEpisode.shouldNotBeNull()
+        navigatedPodcast.shouldNotBeNull()
+        navigatedEpisode?.id shouldBe "ep1"
+        navigatedPodcast?.trackId shouldBe 1L
     }
 
     @Test
@@ -348,7 +347,7 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertNull(state.error)
+            state.error.shouldBeNull()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -383,8 +382,8 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertTrue(state.episodes[0].isDownloaded)
-            assertTrue(downloadRepository.isDownloaded("ep1"))
+            state.episodes[0].isDownloaded shouldBe true
+            downloadRepository.isDownloaded("ep1") shouldBe true
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -420,8 +419,8 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertNotNull(state.error)
-            assertFalse(state.episodes[0].isDownloaded)
+            state.error.shouldNotBeNull()
+            state.episodes[0].isDownloaded shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -469,14 +468,14 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isRefreshing)
-            assertEquals(2, state.episodes.size)
+            state.isRefreshing shouldBe false
+            state.episodes.size shouldBe 2
             cancelAndIgnoreRemainingEvents()
         }
 
         // Verify episodes are saved to database
         val savedEpisodes = repository.getEpisodesByPodcastId("1")
-        assertEquals(2, savedEpisodes.size)
+        savedEpisodes.size shouldBe 2
     }
 
     @Test
@@ -522,8 +521,8 @@ class PodcastDetailViewModelTest {
 
         // Verify listened state is preserved in database
         val savedEpisodes = repository.getEpisodesByPodcastId("1")
-        assertTrue(savedEpisodes.first { it.id == "ep1" }.listened)
-        assertFalse(savedEpisodes.first { it.id == "ep2" }.listened)
+        savedEpisodes.first { it.id == "ep1" }.listened shouldBe true
+        savedEpisodes.first { it.id == "ep2" }.listened shouldBe false
     }
 
     @Test
@@ -544,10 +543,10 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isRefreshing)
-            assertNotNull(state.error)
+            state.isRefreshing shouldBe false
+            state.error.shouldNotBeNull()
             // Original episodes should still be available
-            assertEquals(1, state.episodes.size)
+            state.episodes.size shouldBe 1
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -579,7 +578,7 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isRefreshing)
+            state.isRefreshing shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -615,8 +614,8 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.episodes[0].isDownloaded)
-            assertFalse(downloadRepository.isDownloaded("ep1"))
+            state.episodes[0].isDownloaded shouldBe false
+            downloadRepository.isDownloaded("ep1") shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
     }
