@@ -1,6 +1,10 @@
 package jp.kztproject.simplepodcastplayer.screen
 
 import app.cash.turbine.test
+import io.kotest.matchers.collections.shouldContain
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import jp.kztproject.simplepodcastplayer.data.repository.DownloadCleanupRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
 import jp.kztproject.simplepodcastplayer.fake.FakeDownloadRepository
@@ -16,11 +20,6 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PodcastListViewModelTest {
@@ -53,8 +52,8 @@ class PodcastListViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertEquals(true, state.isLoading)
-            assertEquals(0, state.subscribedPodcasts.size)
+            state.isLoading shouldBe true
+            state.subscribedPodcasts.size shouldBe 0
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -73,11 +72,11 @@ class PodcastListViewModelTest {
             // Skip initial loading state and get the updated state
             testDispatcher.scheduler.advanceUntilIdle()
             val state = expectMostRecentItem()
-            assertFalse(state.isLoading)
-            assertEquals(2, state.subscribedPodcasts.size)
+            state.isLoading shouldBe false
+            state.subscribedPodcasts.size shouldBe 2
             val podcastNames = state.subscribedPodcasts.map { it.name }.toSet()
-            assertTrue(podcastNames.contains("Podcast 1"))
-            assertTrue(podcastNames.contains("Podcast 2"))
+            podcastNames shouldContain "Podcast 1"
+            podcastNames shouldContain "Podcast 2"
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -89,8 +88,8 @@ class PodcastListViewModelTest {
         viewModel.uiState.test {
             testDispatcher.scheduler.advanceUntilIdle()
             val state = expectMostRecentItem()
-            assertFalse(state.isLoading)
-            assertEquals(0, state.subscribedPodcasts.size)
+            state.isLoading shouldBe false
+            state.subscribedPodcasts.size shouldBe 0
         }
     }
 
@@ -105,8 +104,8 @@ class PodcastListViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
             expectMostRecentItem()
             val result = viewModel.getPodcastById(1L)
-            assertNotNull(result)
-            assertEquals("Test Podcast", result.trackName)
+            result.shouldNotBeNull()
+            result.trackName shouldBe "Test Podcast"
         }
     }
 
@@ -118,7 +117,7 @@ class PodcastListViewModelTest {
             testDispatcher.scheduler.advanceUntilIdle()
             expectMostRecentItem()
             val result = viewModel.getPodcastById(999L)
-            assertNull(result)
+            result.shouldBeNull()
         }
     }
 
@@ -136,7 +135,7 @@ class PodcastListViewModelTest {
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            assertEquals(2, state.cleanupConfirmDownloadCount)
+            state.cleanupConfirmDownloadCount shouldBe 2
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -151,7 +150,7 @@ class PodcastListViewModelTest {
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            assertEquals(0, state.cleanupConfirmDownloadCount)
+            state.cleanupConfirmDownloadCount shouldBe 0
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -166,16 +165,16 @@ class PodcastListViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
         // The listened episode's file is gone, the unlistened one is kept
-        assertFalse(downloadRepository.isDownloaded("ep1"))
-        assertTrue(downloadRepository.isDownloaded("ep2"))
-        assertFalse(episodeDao.getById("ep1")!!.isDownloaded)
-        assertTrue(episodeDao.getById("ep2")!!.isDownloaded)
+        downloadRepository.isDownloaded("ep1") shouldBe false
+        downloadRepository.isDownloaded("ep2") shouldBe true
+        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
+        episodeDao.getById("ep2")!!.isDownloaded shouldBe true
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            assertNull(state.cleanupConfirmDownloadCount)
-            assertFalse(state.isCleaningUp)
-            assertEquals("Deleted 1 download", state.cleanupMessage)
+            state.cleanupConfirmDownloadCount.shouldBeNull()
+            state.isCleaningUp shouldBe false
+            state.cleanupMessage shouldBe "Deleted 1 download"
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -189,11 +188,11 @@ class PodcastListViewModelTest {
         testDispatcher.scheduler.advanceUntilIdle()
         viewModel.dismissCleanupConfirm()
 
-        assertTrue(downloadRepository.isDownloaded("ep1"))
+        downloadRepository.isDownloaded("ep1") shouldBe true
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
-            assertNull(state.cleanupConfirmDownloadCount)
+            state.cleanupConfirmDownloadCount.shouldBeNull()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -215,7 +214,7 @@ class PodcastListViewModelTest {
         viewModel.uiState.test {
             // Initial state
             val initialState = awaitItem()
-            assertEquals(0, initialState.subscribedPodcasts.size)
+            initialState.subscribedPodcasts.size shouldBe 0
 
             // Add a podcast
             val podcast = TestDataFactory.createPodcast(trackId = 1L)
@@ -224,7 +223,7 @@ class PodcastListViewModelTest {
 
             // Updated state
             val updatedState = awaitItem()
-            assertEquals(1, updatedState.subscribedPodcasts.size)
+            updatedState.subscribedPodcasts.size shouldBe 1
 
             cancelAndIgnoreRemainingEvents()
         }
