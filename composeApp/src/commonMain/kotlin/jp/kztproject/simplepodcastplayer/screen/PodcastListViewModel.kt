@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import io.github.aakira.napier.Napier
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.entity.PodcastEntity
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadCleanupRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IEpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 
 class PodcastListViewModel(
     private val podcastRepository: IPodcastRepository,
-    private val downloadCleanupRepository: IDownloadCleanupRepository,
+    private val episodeAudioRepository: IEpisodeAudioRepository,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(PodcastListUiState())
     val uiState: StateFlow<PodcastListUiState> = _uiState.asStateFlow()
@@ -41,24 +41,24 @@ class PodcastListViewModel(
     }
 
     /**
-     * Counts the downloads that a cleanup would delete and opens the confirmation dialog.
+     * Counts the audio files that a cleanup would delete and opens the confirmation dialog.
      * A count of 0 still opens the dialog, which then only reports that there is nothing to delete.
      */
-    fun requestCleanupListenedDownloads() {
+    fun requestCleanupListenedAudioFiles() {
         viewModelScope.launch {
-            val count = runCatching { downloadCleanupRepository.countListenedDownloads() }
-                .onFailure { Napier.e("Failed to count listened downloads", it) }
+            val count = runCatching { episodeAudioRepository.countListenedAudioFiles() }
+                .onFailure { Napier.e("Failed to count listened audio files", it) }
                 .getOrDefault(0)
-            _uiState.value = _uiState.value.copy(cleanupConfirmDownloadCount = count)
+            _uiState.value = _uiState.value.copy(cleanupConfirmAudioFileCount = count)
         }
     }
 
-    fun confirmCleanupListenedDownloads() {
-        _uiState.value = _uiState.value.copy(cleanupConfirmDownloadCount = null, isCleaningUp = true)
+    fun confirmCleanupListenedAudioFiles() {
+        _uiState.value = _uiState.value.copy(cleanupConfirmAudioFileCount = null, isCleaningUp = true)
 
         viewModelScope.launch {
-            val deletedCount = runCatching { downloadCleanupRepository.deleteListenedDownloads() }
-                .onFailure { Napier.e("Failed to delete listened downloads", it) }
+            val deletedCount = runCatching { episodeAudioRepository.deleteListenedAudioFiles() }
+                .onFailure { Napier.e("Failed to delete listened audio files", it) }
                 .getOrNull()
 
             _uiState.value = _uiState.value.copy(
@@ -73,7 +73,7 @@ class PodcastListViewModel(
     }
 
     fun dismissCleanupConfirm() {
-        _uiState.value = _uiState.value.copy(cleanupConfirmDownloadCount = null)
+        _uiState.value = _uiState.value.copy(cleanupConfirmAudioFileCount = null)
     }
 
     fun clearCleanupMessage() {
@@ -84,8 +84,8 @@ class PodcastListViewModel(
 data class PodcastListUiState(
     val subscribedPodcasts: List<PodcastEntity> = emptyList(),
     val isLoading: Boolean = true,
-    /** Number of listened downloads a cleanup would delete. null hides the confirmation dialog. */
-    val cleanupConfirmDownloadCount: Int? = null,
+    /** Number of listened audio files a cleanup would delete. null hides the confirmation dialog. */
+    val cleanupConfirmAudioFileCount: Int? = null,
     val isCleaningUp: Boolean = false,
     val cleanupMessage: String? = null,
 )
