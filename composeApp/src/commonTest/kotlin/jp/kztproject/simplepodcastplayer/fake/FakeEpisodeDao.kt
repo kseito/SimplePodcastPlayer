@@ -9,6 +9,12 @@ import kotlinx.coroutines.flow.map
 class FakeEpisodeDao : EpisodeDao {
     private val episodes = mutableListOf<EpisodeEntity>()
     private val episodesFlow = MutableStateFlow<List<EpisodeEntity>>(emptyList())
+    private var downloadedEpisodeQueryError: Exception? = null
+
+    /** Makes the queries that count deletable audio files throw, to cover the failure paths. */
+    fun setDownloadedEpisodeQueryError(e: Exception?) {
+        downloadedEpisodeQueryError = e
+    }
 
     override suspend fun insert(episode: EpisodeEntity) {
         episodes.removeAll { it.id == episode.id }
@@ -69,11 +75,15 @@ class FakeEpisodeDao : EpisodeDao {
         allEpisodes.filter { it.isDownloaded }
     }
 
-    override suspend fun getDownloadedEpisodesByPodcastId(podcastId: String): List<EpisodeEntity> =
-        episodes.filter { it.podcastId == podcastId && it.isDownloaded }
+    override suspend fun getDownloadedEpisodesByPodcastId(podcastId: String): List<EpisodeEntity> {
+        downloadedEpisodeQueryError?.let { throw it }
+        return episodes.filter { it.podcastId == podcastId && it.isDownloaded }
+    }
 
-    override suspend fun getListenedDownloadedEpisodes(): List<EpisodeEntity> =
-        episodes.filter { it.listened && it.isDownloaded }
+    override suspend fun getListenedDownloadedEpisodes(): List<EpisodeEntity> {
+        downloadedEpisodeQueryError?.let { throw it }
+        return episodes.filter { it.listened && it.isDownloaded }
+    }
 
     override fun getInProgressEpisodes(): Flow<List<EpisodeEntity>> = episodesFlow.map { list ->
         list.filter { it.lastPlaybackPosition > 0L && !it.listened }
