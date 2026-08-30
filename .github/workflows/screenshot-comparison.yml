@@ -17,21 +17,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7
 
-      - name: Set up JDK 21
-        uses: actions/setup-java@v5
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-
-      - name: Cache Gradle packages
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Set up build environment
+        uses: ./.github/actions/setup-build-env
 
       - name: Download reference screenshots
         uses: dawidd6/action-download-artifact@b6e2e70617bc3265edd6dab6c906732b2f1ae151 # v21
@@ -41,9 +28,6 @@ jobs:
           workflow: screenshot-record.yml
           branch: ${{ github.base_ref }}
           if_no_artifact_found: warn
-
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
 
       - name: Compare screenshots
         run: ./gradlew :composeApp:compareRoborazziAndroidHostTest
