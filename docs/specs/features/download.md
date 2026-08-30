@@ -37,6 +37,7 @@
 |---|---|
 | ダウンロード済みが 1 件以上 | 確認ダイアログ「N downloaded episode(s) will also be deleted.」を表示。[Unsubscribe] で削除 + 購読解除、[Cancel] で何もしない |
 | ダウンロード済みが 0 件 | ダイアログを出さず即座に購読解除 |
+| 件数の取得に失敗 | 購読解除を中止し `error = "Failed to unsubscribe"` をセット。**失敗を 0 件として扱わない**（確認なしの削除になるため） |
 
 - 確認前は購読状態・ファイルとも一切変更しない（`PodcastDetailUiState.unsubscribeConfirmAudioFileCount` が null 以外の間はダイアログ表示中）
 - 削除するのはファイルとダウンロード状態のみ。**エピソードのレコードは残す**ため、再購読時に再生位置と聴取済みフラグが復活する
@@ -50,6 +51,7 @@
 |---|---|---|
 | 対象が 1 件以上 | 「Delete the downloaded audio of N listened episode(s)?」 | [Delete] / [Cancel] |
 | 対象が 0 件 | 「There are no listened downloads to delete.」 | [OK] のみ |
+| 件数の取得に失敗 | ダイアログを出さず Snackbar「Failed to check downloads」 | － |
 
 - 削除完了後は Snackbar で「Deleted N download(s)」を表示（失敗時は「Failed to delete downloads」）
 - 実行中は `isCleaningUp = true` でゴミ箱ボタンを無効化
@@ -153,5 +155,6 @@ interface IAudioDownloader {
 - `FakeAudioDownloader`（commonTest の `fake` パッケージ）で `IAudioDownloader` のみを差し替え、
   リポジトリは本物の `EpisodeAudioRepository` を使う。DB への書き戻しを Fake 側で再現する必要がない
 - `EpisodeAudioRepositoryTest` で DB 同期（ダウンロード完了 / 削除）と削除対象の抽出条件（ポッドキャスト単位 / 聴取済み）を検証
-- `PodcastDetailViewModelTest` でダウンロード開始・完了・失敗・削除の状態遷移と、購読解除の確認 / 実行 / キャンセルを検証
-- `PodcastListViewModelTest` で聴取済み一括削除の件数集計・削除・キャンセルを検証
+- `PodcastDetailViewModelTest` でダウンロード開始・完了・失敗・削除の状態遷移と、購読解除の確認 / 実行 / キャンセル / 件数取得失敗を検証
+- `PodcastListViewModelTest` で聴取済み一括削除の件数集計・削除・キャンセル・件数取得失敗を検証
+- 件数取得の失敗は `FakeEpisodeDao.setDownloadedEpisodeQueryError()` で再現する
