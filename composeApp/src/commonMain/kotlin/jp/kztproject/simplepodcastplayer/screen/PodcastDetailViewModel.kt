@@ -88,6 +88,9 @@ class PodcastDetailViewModel(
     /**
      * Unsubscribing discards the downloaded files of this podcast, so ask for confirmation first.
      * Skips the dialog when the podcast holds no audio files.
+     *
+     * Aborts when the count cannot be read: treating a failure as 0 would skip the dialog and
+     * delete the audio files without the user ever confirming.
      */
     private fun requestUnsubscribe() {
         val podcast = _uiState.value.podcast ?: return
@@ -97,12 +100,12 @@ class PodcastDetailViewModel(
                 episodeAudioRepository.countAudioFilesByPodcast(podcast.trackId.toString())
             }.onFailure {
                 Napier.e("Failed to count audio files", it)
-            }.getOrDefault(0)
+            }.getOrNull()
 
-            if (audioFileCount > 0) {
-                _uiState.update { it.copy(unsubscribeConfirmAudioFileCount = audioFileCount) }
-            } else {
-                unsubscribe()
+            when {
+                audioFileCount == null -> _uiState.update { it.copy(error = "Failed to unsubscribe") }
+                audioFileCount > 0 -> _uiState.update { it.copy(unsubscribeConfirmAudioFileCount = audioFileCount) }
+                else -> unsubscribe()
             }
         }
     }
