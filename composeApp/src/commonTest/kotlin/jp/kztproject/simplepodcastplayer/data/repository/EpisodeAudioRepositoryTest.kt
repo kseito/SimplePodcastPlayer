@@ -52,6 +52,20 @@ class EpisodeAudioRepositoryTest {
     }
 
     @Test
+    fun deleteAudioFile_fileAlreadyMissing_clearsStaleDownloadState() = runTest {
+        // The DB says downloaded but the file is gone, e.g. it was removed outside the app
+        episodeDao.insert(TestDataFactory.createEpisodeEntity(id = "ep1", podcastId = "1", isDownloaded = true))
+
+        repository.deleteAudioFile("ep1") shouldBe true
+
+        // Without clearing the columns the episode would stay "downloaded" forever
+        // and keep being counted by the cleanup flows
+        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
+        episodeDao.getById("ep1")!!.localFilePath.shouldBeNull()
+        repository.countAudioFilesByPodcast("1") shouldBe 0
+    }
+
+    @Test
     fun countAudioFilesByPodcast_countsOnlyDownloadedEpisodesOfThatPodcast() = runTest {
         addEpisode(id = "ep1", podcastId = "1", isDownloaded = true)
         addEpisode(id = "ep2", podcastId = "1", isDownloaded = false)
