@@ -156,6 +156,26 @@ class PodcastListViewModelTest {
     }
 
     @Test
+    fun requestCleanupListenedAudioFiles_countFails_reportsErrorWithoutDialog() = runTest {
+        setupEpisode(id = "ep1", listened = true, isDownloaded = true)
+        episodeDao.setDownloadedEpisodeQueryError(IllegalStateException("DB error"))
+
+        viewModel = PodcastListViewModel(repository, episodeAudioRepository)
+        viewModel.requestCleanupListenedAudioFiles()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            // A failed count must not be shown as "there is nothing to delete"
+            state.cleanupConfirmAudioFileCount.shouldBeNull()
+            state.cleanupMessage shouldBe "Failed to check downloads"
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        episodeAudioRepository.isDownloaded("ep1") shouldBe true
+    }
+
+    @Test
     fun confirmCleanupListenedAudioFiles_deletesOnlyListenedDownloads() = runTest {
         setupEpisode(id = "ep1", listened = true, isDownloaded = true)
         setupEpisode(id = "ep2", listened = false, isDownloaded = true)
