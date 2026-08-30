@@ -16,6 +16,8 @@ plugins {
 }
 
 kotlin {
+    jvmToolchain(21)
+
     androidLibrary {
         namespace = "jp.kztproject.simplepodcastplayer.shared"
         compileSdk =
