@@ -139,6 +139,10 @@ interface IAudioDownloader {
 | localFilePath | ローカルファイルパス | null |
 | downloadedAt | 現在時刻（UnixTime ミリ秒） | 0 |
 
+削除時、ファイルが既に存在しない場合もカラムをクリアする。クリアしないと `isDownloaded = true` の行が残り続け、
+一括削除の件数に数えられるのに削除できないという状態から復帰できなくなるため。
+ファイルが残っているのに削除に失敗した場合のみ、カラムを変更せず false を返す。
+
 ## オフライン再生との連携
 
 `BasePlayerViewModel` は再生開始時に `episodeAudioRepository.getAudioFilePath(episode.id)` を確認し、
