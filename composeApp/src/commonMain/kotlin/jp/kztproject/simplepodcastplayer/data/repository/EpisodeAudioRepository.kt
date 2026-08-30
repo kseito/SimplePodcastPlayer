@@ -27,17 +27,28 @@ class EpisodeAudioRepository(private val audioDownloader: IAudioDownloader, priv
             }
         }
 
+    /**
+     * @return true if the episode held an audio file that is now gone, false if the deletion
+     * failed or there was nothing to delete
+     */
     override suspend fun deleteAudioFile(episodeId: String): Boolean {
         val deleted = audioDownloader.deleteAudioFile(episodeId)
-        if (deleted) {
-            episodeDao.updateDownloadStatus(
-                episodeId = episodeId,
-                isDownloaded = false,
-                localFilePath = null,
-                downloadedAt = 0L,
-            )
+        if (!deleted && audioDownloader.isDownloaded(episodeId)) {
+            // The file is still on disk, so the deletion genuinely failed. Leave the DB alone.
+            return false
         }
-        return deleted
+
+        // The file is gone: either this call removed it, or it had already disappeared while the
+        // DB still said "downloaded". Clear the columns either way, otherwise a stale row keeps
+        // being counted by the cleanup flows and can never be cleaned up.
+        val hadStaleDownloadState = !deleted && episodeDao.getById(episodeId)?.isDownloaded == true
+        episodeDao.updateDownloadStatus(
+            episodeId = episodeId,
+            isDownloaded = false,
+            localFilePath = null,
+            downloadedAt = 0L,
+        )
+        return deleted || hadStaleDownloadState
     }
 
     override fun getAudioFilePath(episodeId: String): String? = audioDownloader.getAudioFilePath(episodeId)
