@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -87,7 +88,7 @@ fun PodcastDetailScreen(podcastId: Long, onNavigateBack: () -> Unit, onNavigateT
                     onRefresh = { viewModel.refreshEpisodes() },
                     onPlayEpisode = { episodeId -> viewModel.playEpisode(episodeId) },
                     onDownloadEpisode = { episodeId -> viewModel.downloadEpisode(episodeId) },
-                    onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
+                    onDeleteAudioFile = { episodeId -> viewModel.deleteAudioFile(episodeId) },
                 ),
             )
         } else {
@@ -128,7 +129,7 @@ fun PodcastDetailScreen(podcast: Podcast, onNavigateBack: () -> Unit, onNavigate
                 onRefresh = { viewModel.refreshEpisodes() },
                 onPlayEpisode = { episodeId -> viewModel.playEpisode(episodeId) },
                 onDownloadEpisode = { episodeId -> viewModel.downloadEpisode(episodeId) },
-                onDeleteDownload = { episodeId -> viewModel.deleteDownload(episodeId) },
+                onDeleteAudioFile = { episodeId -> viewModel.deleteAudioFile(episodeId) },
             ),
         )
     }
@@ -151,11 +152,40 @@ private fun PodcastDetailScreenScaffold(
 
     Box {
         content(uiState)
+
+        uiState.unsubscribeConfirmAudioFileCount?.let { audioFileCount ->
+            UnsubscribeConfirmDialog(
+                audioFileCount = audioFileCount,
+                onConfirm = viewModel::confirmUnsubscribe,
+                onDismiss = viewModel::dismissUnsubscribeConfirm,
+            )
+        }
+
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
     }
+}
+
+@Composable
+private fun UnsubscribeConfirmDialog(audioFileCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val episodeLabel = if (audioFileCount == 1) "episode" else "episodes"
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Unsubscribe") },
+        text = { Text("$audioFileCount downloaded $episodeLabel will also be deleted.") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text("Unsubscribe")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        },
+    )
 }
 
 private data class PodcastDetailState(
@@ -174,7 +204,7 @@ private data class PodcastDetailActions(
     val onRefresh: () -> Unit,
     val onPlayEpisode: (String) -> Unit,
     val onDownloadEpisode: (String) -> Unit,
-    val onDeleteDownload: (String) -> Unit,
+    val onDeleteAudioFile: (String) -> Unit,
 )
 
 @Composable
@@ -372,7 +402,7 @@ private fun EpisodesSection(state: PodcastDetailState, actions: PodcastDetailAct
                         downloadState = state.downloadStates[episode.id],
                         onPlay = { actions.onPlayEpisode(episode.id) },
                         onDownload = { actions.onDownloadEpisode(episode.id) },
-                        onDeleteDownload = { actions.onDeleteDownload(episode.id) },
+                        onDeleteAudioFile = { actions.onDeleteAudioFile(episode.id) },
                     )
                 }
             }
@@ -386,7 +416,7 @@ private fun EpisodeItem(
     downloadState: DownloadState?,
     onPlay: () -> Unit,
     onDownload: () -> Unit,
-    onDeleteDownload: () -> Unit,
+    onDeleteAudioFile: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -436,7 +466,7 @@ private fun EpisodeItem(
                             isDownloaded = episode.isDownloaded,
                             downloadState = downloadState,
                             onDownload = onDownload,
-                            onDeleteDownload = onDeleteDownload,
+                            onDeleteAudioFile = onDeleteAudioFile,
                         )
 
                         Button(onClick = onPlay) {
@@ -478,7 +508,7 @@ private fun DownloadButton(
     isDownloaded: Boolean,
     downloadState: DownloadState?,
     onDownload: () -> Unit,
-    onDeleteDownload: () -> Unit,
+    onDeleteAudioFile: () -> Unit,
 ) {
     when {
         downloadState is DownloadState.Downloading -> {
@@ -506,7 +536,7 @@ private fun DownloadButton(
 
         isDownloaded -> {
             // Show delete button
-            IconButton(onClick = onDeleteDownload) {
+            IconButton(onClick = onDeleteAudioFile) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete download",
@@ -591,7 +621,7 @@ fun PodcastDetailScreenPreview() {
                 onRefresh = {},
                 onPlayEpisode = {},
                 onDownloadEpisode = {},
-                onDeleteDownload = {},
+                onDeleteAudioFile = {},
             ),
         )
     }

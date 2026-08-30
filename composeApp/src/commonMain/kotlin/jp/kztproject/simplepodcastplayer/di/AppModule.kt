@@ -5,8 +5,8 @@ import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.IAppleSearchApiClient
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.DatabaseBuilder
-import jp.kztproject.simplepodcastplayer.data.repository.DownloadRepositoryBuilder
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.EpisodeAudioRepositoryBuilder
+import jp.kztproject.simplepodcastplayer.data.repository.IEpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPodcastRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PlaybackRepository
@@ -28,19 +28,19 @@ val appModule = module {
     // Repositories
     single<IPodcastRepository> { PodcastRepository(get(), get()) }
     single<IPlaybackRepository> { PlaybackRepository(get(), get()) }
-    factory<IDownloadRepository> { DownloadRepositoryBuilder.build() }
+    single<IEpisodeAudioRepository> { EpisodeAudioRepositoryBuilder.build() }
 
     // Services
     factory<IAppleSearchApiClient> { AppleSearchApiClient() }
 
     // ViewModels
-    viewModel { PodcastListViewModel(get()) }
+    viewModel { PodcastListViewModel(get(), get()) }
     viewModel { PodcastSearchViewModel(get()) }
     viewModel { InProgressEpisodesViewModel(get(), get()) }
     viewModel { params ->
         PodcastDetailViewModel(
             podcastRepository = get(),
-            downloadRepository = get(),
+            episodeAudioRepository = get(),
             appleApiClient = get(),
             onNavigateToPlayer = params.get<(Episode, Podcast) -> Unit>(),
         )

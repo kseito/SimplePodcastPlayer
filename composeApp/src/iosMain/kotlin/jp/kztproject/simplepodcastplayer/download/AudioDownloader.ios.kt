@@ -26,7 +26,7 @@ import platform.posix.fwrite
 
 class DownloadDataCreationException(message: String) : IllegalStateException(message)
 
-actual class AudioDownloader {
+class AudioDownloader : IAudioDownloader {
     private val httpClient = HttpClient()
 
     @OptIn(ExperimentalForeignApi::class)
@@ -56,7 +56,7 @@ actual class AudioDownloader {
     }
 
     @OptIn(ExperimentalForeignApi::class, ExperimentalTime::class)
-    actual suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = channelFlow {
+    override suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = channelFlow {
         send(DownloadState.Downloading(0f))
 
         try {
@@ -121,7 +121,7 @@ actual class AudioDownloader {
         }
     }.flowOn(Dispatchers.IO)
 
-    actual fun getLocalFilePath(episodeId: String): String? {
+    override fun getAudioFilePath(episodeId: String): String? {
         val downloadDir = getDownloadDirectory()
         val fileName = episodeId.replace(Regex("[^a-zA-Z0-9]"), "_") + ".mp3"
         val filePath = "$downloadDir/$fileName"
@@ -134,11 +134,11 @@ actual class AudioDownloader {
     }
 
     @OptIn(ExperimentalForeignApi::class)
-    actual suspend fun deleteDownload(episodeId: String): Boolean = getLocalFilePath(episodeId)?.let { filePath ->
+    override suspend fun deleteAudioFile(episodeId: String): Boolean = getAudioFilePath(episodeId)?.let { filePath ->
         NSFileManager.defaultManager.removeItemAtPath(filePath, null)
     } ?: false
 
-    actual fun isDownloaded(episodeId: String): Boolean = getLocalFilePath(episodeId) != null
+    override fun isDownloaded(episodeId: String): Boolean = getAudioFilePath(episodeId) != null
 
     private companion object {
         const val DOWNLOAD_BUFFER_SIZE = 8192

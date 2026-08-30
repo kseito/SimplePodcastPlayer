@@ -18,14 +18,24 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -48,19 +58,97 @@ fun PodcastListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     PodcastListContent(
         uiState = uiState,
-        onNavigateToSearch = onNavigateToSearch,
-        onNavigateToInProgress = onNavigateToInProgress,
-        onPodcastClick = onPodcastClick,
+        actions = PodcastListActions(
+            onNavigateToSearch = onNavigateToSearch,
+            onNavigateToInProgress = onNavigateToInProgress,
+            onPodcastClick = onPodcastClick,
+            onCleanupClick = viewModel::requestCleanupListenedAudioFiles,
+            onCleanupConfirm = viewModel::confirmCleanupListenedAudioFiles,
+            onCleanupDismiss = viewModel::dismissCleanupConfirm,
+            onCleanupMessageShown = viewModel::clearCleanupMessage,
+        ),
+    )
+}
+
+private data class PodcastListActions(
+    val onNavigateToSearch: () -> Unit,
+    val onNavigateToInProgress: () -> Unit,
+    val onPodcastClick: (Long) -> Unit,
+    val onCleanupClick: () -> Unit,
+    val onCleanupConfirm: () -> Unit,
+    val onCleanupDismiss: () -> Unit,
+    val onCleanupMessageShown: () -> Unit,
+)
+
+@Composable
+private fun PodcastListContent(uiState: PodcastListUiState, actions: PodcastListActions) {
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.cleanupMessage) {
+        uiState.cleanupMessage?.let { message ->
+            snackbarHostState.showSnackbar(message)
+            actions.onCleanupMessageShown()
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        PodcastListBody(uiState = uiState, actions = actions)
+
+        uiState.cleanupConfirmAudioFileCount?.let { audioFileCount ->
+            CleanupConfirmDialog(
+                audioFileCount = audioFileCount,
+                onConfirm = actions.onCleanupConfirm,
+                onDismiss = actions.onCleanupDismiss,
+            )
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter),
+        )
+    }
+}
+
+@Composable
+private fun CleanupConfirmDialog(audioFileCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val hasDownloads = audioFileCount > 0
+    val episodeLabel = if (audioFileCount == 1) "episode" else "episodes"
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Delete listened downloads") },
+        text = {
+            Text(
+                if (hasDownloads) {
+                    "Delete the downloaded audio of $audioFileCount listened $episodeLabel?"
+                } else {
+                    "There are no listened downloads to delete."
+                },
+            )
+        },
+        confirmButton = {
+            if (hasDownloads) {
+                TextButton(onClick = onConfirm) {
+                    Text("Delete")
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text("OK")
+                }
+            }
+        },
+        dismissButton = {
+            if (hasDownloads) {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        },
     )
 }
 
 @Composable
-private fun PodcastListContent(
-    uiState: PodcastListUiState,
-    onNavigateToSearch: () -> Unit,
-    onNavigateToInProgress: () -> Unit,
-    onPodcastClick: (Long) -> Unit,
-) {
+private fun PodcastListBody(uiState: PodcastListUiState, actions: PodcastListActions) {
     Column(
         modifier =
         Modifier
@@ -79,15 +167,26 @@ private fun PodcastListContent(
                 text = "My Podcasts",
                 style = MaterialTheme.typography.headlineMedium,
             )
-            Button(onClick = onNavigateToSearch) {
-                Text("Search")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = actions.onCleanupClick,
+                    enabled = !uiState.isCleaningUp,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete listened downloads",
+                    )
+                }
+                Button(onClick = actions.onNavigateToSearch) {
+                    Text("Search")
+                }
             }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedButton(
-            onClick = onNavigateToInProgress,
+            onClick = actions.onNavigateToInProgress,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text("In Progress")
@@ -136,7 +235,7 @@ private fun PodcastListContent(
                     items(uiState.subscribedPodcasts) { podcast ->
                         PodcastListItem(
                             podcast = podcast,
-                            onClick = { onPodcastClick(podcast.id) },
+                            onClick = { actions.onPodcastClick(podcast.id) },
                         )
                     }
                 }
@@ -252,9 +351,15 @@ fun PodcastListScreenPreview() {
                 ),
                 isLoading = false,
             ),
-            onNavigateToSearch = {},
-            onNavigateToInProgress = {},
-            onPodcastClick = {},
+            actions = PodcastListActions(
+                onNavigateToSearch = {},
+                onNavigateToInProgress = {},
+                onPodcastClick = {},
+                onCleanupClick = {},
+                onCleanupConfirm = {},
+                onCleanupDismiss = {},
+                onCleanupMessageShown = {},
+            ),
         )
     }
 }
@@ -268,9 +373,15 @@ fun PodcastListScreenEmptyPreview() {
                 subscribedPodcasts = emptyList(),
                 isLoading = false,
             ),
-            onNavigateToSearch = {},
-            onNavigateToInProgress = {},
-            onPodcastClick = {},
+            actions = PodcastListActions(
+                onNavigateToSearch = {},
+                onNavigateToInProgress = {},
+                onPodcastClick = {},
+                onCleanupClick = {},
+                onCleanupConfirm = {},
+                onCleanupDismiss = {},
+                onCleanupMessageShown = {},
+            ),
         )
     }
 }

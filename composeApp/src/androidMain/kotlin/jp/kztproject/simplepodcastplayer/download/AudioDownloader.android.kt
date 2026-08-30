@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.withContext
 import java.io.File
 
-actual class AudioDownloader(private val context: Context) {
+class AudioDownloader(private val context: Context) : IAudioDownloader {
     private val httpClient = HttpClient()
 
     private fun getDownloadDirectory(): File {
@@ -24,7 +24,7 @@ actual class AudioDownloader(private val context: Context) {
         return downloadDir
     }
 
-    actual suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = channelFlow {
+    override suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = channelFlow {
         send(DownloadState.Downloading(0f))
 
         try {
@@ -61,19 +61,19 @@ actual class AudioDownloader(private val context: Context) {
         }
     }.flowOn(Dispatchers.IO)
 
-    actual fun getLocalFilePath(episodeId: String): String? {
+    override fun getAudioFilePath(episodeId: String): String? {
         val downloadDir = getDownloadDirectory()
         val fileName = "${episodeId.replace("[^a-zA-Z0-9]".toRegex(), "_")}.mp3"
         val file = File(downloadDir, fileName)
         return if (file.exists()) file.absolutePath else null
     }
 
-    actual suspend fun deleteDownload(episodeId: String): Boolean = withContext(Dispatchers.IO) {
-        val filePath = getLocalFilePath(episodeId)
+    override suspend fun deleteAudioFile(episodeId: String): Boolean = withContext(Dispatchers.IO) {
+        val filePath = getAudioFilePath(episodeId)
         filePath?.let { File(it).delete() } ?: false
     }
 
-    actual fun isDownloaded(episodeId: String): Boolean = getLocalFilePath(episodeId) != null
+    override fun isDownloaded(episodeId: String): Boolean = getAudioFilePath(episodeId) != null
 
     private companion object {
         const val DOWNLOAD_BUFFER_SIZE = 8192

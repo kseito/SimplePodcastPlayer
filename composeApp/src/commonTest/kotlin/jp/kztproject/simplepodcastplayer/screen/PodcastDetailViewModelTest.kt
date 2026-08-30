@@ -1,13 +1,18 @@
 package jp.kztproject.simplepodcastplayer.screen
 
 import app.cash.turbine.test
+import io.kotest.matchers.collections.shouldBeEmpty
+import io.kotest.matchers.nulls.shouldBeNull
+import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.shouldBe
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.PodcastLookupResponse
 import jp.kztproject.simplepodcastplayer.data.PodcastLookupResult
+import jp.kztproject.simplepodcastplayer.data.repository.EpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.PodcastRepository
 import jp.kztproject.simplepodcastplayer.fake.FakeAppleSearchApiClient
-import jp.kztproject.simplepodcastplayer.fake.FakeDownloadRepository
+import jp.kztproject.simplepodcastplayer.fake.FakeAudioDownloader
 import jp.kztproject.simplepodcastplayer.fake.FakeEpisodeDao
 import jp.kztproject.simplepodcastplayer.fake.FakePodcastDao
 import jp.kztproject.simplepodcastplayer.fake.TestDataFactory
@@ -20,11 +25,6 @@ import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PodcastDetailViewModelTest {
@@ -32,7 +32,8 @@ class PodcastDetailViewModelTest {
     private lateinit var podcastDao: FakePodcastDao
     private lateinit var episodeDao: FakeEpisodeDao
     private lateinit var repository: PodcastRepository
-    private lateinit var downloadRepository: FakeDownloadRepository
+    private lateinit var audioDownloader: FakeAudioDownloader
+    private lateinit var episodeAudioRepository: EpisodeAudioRepository
     private lateinit var appleApiClient: FakeAppleSearchApiClient
     private lateinit var viewModel: PodcastDetailViewModel
     private var navigatedEpisode: Episode? = null
@@ -44,14 +45,15 @@ class PodcastDetailViewModelTest {
         podcastDao = FakePodcastDao()
         episodeDao = FakeEpisodeDao()
         repository = PodcastRepository(podcastDao, episodeDao)
-        downloadRepository = FakeDownloadRepository()
+        audioDownloader = FakeAudioDownloader()
+        episodeAudioRepository = EpisodeAudioRepository(audioDownloader, episodeDao)
         appleApiClient = FakeAppleSearchApiClient()
         navigatedEpisode = null
         navigatedPodcast = null
 
         viewModel = PodcastDetailViewModel(
             podcastRepository = repository,
-            downloadRepository = downloadRepository,
+            episodeAudioRepository = episodeAudioRepository,
             appleApiClient = appleApiClient,
             onNavigateToPlayer = { episode, podcast ->
                 navigatedEpisode = episode
@@ -102,11 +104,11 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isSubscribed)
-            assertFalse(state.isLoading)
-            assertEquals(2, state.episodes.size)
-            assertEquals("Episode 2", state.episodes[0].title) // Sorted by trackId DESC
-            assertEquals("Episode 1", state.episodes[1].title)
+            state.isSubscribed shouldBe false
+            state.isLoading shouldBe false
+            state.episodes.size shouldBe 2
+            state.episodes[0].title shouldBe "Episode 2" // Sorted by trackId DESC
+            state.episodes[1].title shouldBe "Episode 1"
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -125,11 +127,11 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertTrue(state.isSubscribed)
-            assertFalse(state.isLoading)
-            assertEquals(2, state.episodes.size)
-            assertEquals("DB Episode 1", state.episodes[0].title)
-            assertEquals("DB Episode 2", state.episodes[1].title)
+            state.isSubscribed shouldBe true
+            state.isLoading shouldBe false
+            state.episodes.size shouldBe 2
+            state.episodes[0].title shouldBe "DB Episode 1"
+            state.episodes[1].title shouldBe "DB Episode 2"
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -144,9 +146,9 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isLoading)
-            assertNotNull(state.error)
-            assertTrue(state.episodes.isEmpty())
+            state.isLoading shouldBe false
+            state.error.shouldNotBeNull()
+            state.episodes.shouldBeEmpty()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -181,13 +183,13 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertTrue(state.isSubscribed)
-            assertFalse(state.isSubscriptionLoading)
+            state.isSubscribed shouldBe true
+            state.isSubscriptionLoading shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
 
         // Verify saved in repository
-        assertTrue(repository.isSubscribed(1L))
+        repository.isSubscribed(1L) shouldBe true
     }
 
     @Test
@@ -204,13 +206,122 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isSubscribed)
-            assertFalse(state.isSubscriptionLoading)
+            state.isSubscribed shouldBe false
+            state.isSubscriptionLoading shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
 
         // Verify unsubscribed in repository
-        assertFalse(repository.isSubscribed(1L))
+        repository.isSubscribed(1L) shouldBe false
+    }
+
+    @Test
+    fun toggleSubscription_unsubscribeWithDownloads_showsConfirmDialogWithoutDeleting() = runTest {
+        val podcast = subscribeWithDownloadedEpisode()
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.toggleSubscription()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            state.unsubscribeConfirmAudioFileCount shouldBe 1
+            // Nothing happens until the user confirms
+            state.isSubscribed shouldBe true
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        repository.isSubscribed(1L) shouldBe true
+        episodeAudioRepository.isDownloaded("ep1") shouldBe true
+    }
+
+    @Test
+    fun confirmUnsubscribe_deletesDownloadsAndUnsubscribes() = runTest {
+        val podcast = subscribeWithDownloadedEpisode()
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.toggleSubscription()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.confirmUnsubscribe()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            state.unsubscribeConfirmAudioFileCount.shouldBeNull()
+            state.isSubscribed shouldBe false
+            state.isSubscriptionLoading shouldBe false
+            state.episodes.none { it.isDownloaded } shouldBe true
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        repository.isSubscribed(1L) shouldBe false
+        episodeAudioRepository.isDownloaded("ep1") shouldBe false
+        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
+    }
+
+    @Test
+    fun dismissUnsubscribeConfirm_keepsSubscriptionAndDownloads() = runTest {
+        val podcast = subscribeWithDownloadedEpisode()
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+        viewModel.toggleSubscription()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.dismissUnsubscribeConfirm()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            state.unsubscribeConfirmAudioFileCount.shouldBeNull()
+            state.isSubscribed shouldBe true
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        repository.isSubscribed(1L) shouldBe true
+        episodeAudioRepository.isDownloaded("ep1") shouldBe true
+    }
+
+    @Test
+    fun toggleSubscription_countFails_keepsSubscriptionAndDownloads() = runTest {
+        val podcast = subscribeWithDownloadedEpisode()
+        episodeDao.setDownloadedEpisodeQueryError(IllegalStateException("DB error"))
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.toggleSubscription()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            // A failed count must not be read as "no downloads" and silently delete them
+            state.unsubscribeConfirmAudioFileCount.shouldBeNull()
+            state.error shouldBe "Failed to unsubscribe"
+            state.isSubscribed shouldBe true
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        repository.isSubscribed(1L) shouldBe true
+        episodeAudioRepository.isDownloaded("ep1") shouldBe true
+    }
+
+    private suspend fun subscribeWithDownloadedEpisode(): Podcast {
+        val podcast = TestDataFactory.createPodcast(trackId = 1L)
+        val episodes = listOf(TestDataFactory.createEpisode(id = "ep1", podcastId = "1"))
+        repository.subscribeToPodcast(podcast, episodes)
+        episodeDao.updateDownloadStatus(
+            episodeId = "ep1",
+            isDownloaded = true,
+            localFilePath = "/fake/path/ep1.mp3",
+            downloadedAt = 1703001600000L,
+        )
+        audioDownloader.setDownloadedEpisode("ep1", "/fake/path/ep1.mp3")
+        return podcast
     }
 
     @Test
@@ -241,10 +352,10 @@ class PodcastDetailViewModelTest {
         viewModel.playEpisode("ep1")
         testDispatcher.scheduler.advanceUntilIdle()
 
-        assertNotNull(navigatedEpisode)
-        assertNotNull(navigatedPodcast)
-        assertEquals("ep1", navigatedEpisode?.id)
-        assertEquals(1L, navigatedPodcast?.trackId)
+        navigatedEpisode.shouldNotBeNull()
+        navigatedPodcast.shouldNotBeNull()
+        navigatedEpisode?.id shouldBe "ep1"
+        navigatedPodcast?.trackId shouldBe 1L
     }
 
     @Test
@@ -259,7 +370,7 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertNull(state.error)
+            state.error.shouldBeNull()
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -294,8 +405,8 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertTrue(state.episodes[0].isDownloaded)
-            assertTrue(downloadRepository.isDownloaded("ep1"))
+            state.episodes[0].isDownloaded shouldBe true
+            episodeAudioRepository.isDownloaded("ep1") shouldBe true
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -321,7 +432,7 @@ class PodcastDetailViewModelTest {
                 results = lookupResults,
             ),
         )
-        downloadRepository.setShouldFailDownload(true, "Download failed")
+        audioDownloader.setShouldFailDownload(true, "Download failed")
 
         viewModel.initialize(podcast)
         testDispatcher.scheduler.advanceUntilIdle()
@@ -331,8 +442,8 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertNotNull(state.error)
-            assertFalse(state.episodes[0].isDownloaded)
+            state.error.shouldNotBeNull()
+            state.episodes[0].isDownloaded shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -380,14 +491,14 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isRefreshing)
-            assertEquals(2, state.episodes.size)
+            state.isRefreshing shouldBe false
+            state.episodes.size shouldBe 2
             cancelAndIgnoreRemainingEvents()
         }
 
         // Verify episodes are saved to database
         val savedEpisodes = repository.getEpisodesByPodcastId("1")
-        assertEquals(2, savedEpisodes.size)
+        savedEpisodes.size shouldBe 2
     }
 
     @Test
@@ -433,8 +544,8 @@ class PodcastDetailViewModelTest {
 
         // Verify listened state is preserved in database
         val savedEpisodes = repository.getEpisodesByPodcastId("1")
-        assertTrue(savedEpisodes.first { it.id == "ep1" }.listened)
-        assertFalse(savedEpisodes.first { it.id == "ep2" }.listened)
+        savedEpisodes.first { it.id == "ep1" }.listened shouldBe true
+        savedEpisodes.first { it.id == "ep2" }.listened shouldBe false
     }
 
     @Test
@@ -455,10 +566,10 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isRefreshing)
-            assertNotNull(state.error)
+            state.isRefreshing shouldBe false
+            state.error.shouldNotBeNull()
             // Original episodes should still be available
-            assertEquals(1, state.episodes.size)
+            state.episodes.size shouldBe 1
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -490,13 +601,13 @@ class PodcastDetailViewModelTest {
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.isRefreshing)
+            state.isRefreshing shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
     }
 
     @Test
-    fun deleteDownload_success_updatesEpisodeState() = runTest {
+    fun deleteAudioFile_success_updatesEpisodeState() = runTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
         val lookupResults = listOf(
             PodcastLookupResult(
@@ -516,18 +627,18 @@ class PodcastDetailViewModelTest {
                 results = lookupResults,
             ),
         )
-        downloadRepository.setDownloadedEpisode("ep1", "/fake/path/ep1.mp3")
+        audioDownloader.setDownloadedEpisode("ep1", "/fake/path/ep1.mp3")
 
         viewModel.initialize(podcast)
         testDispatcher.scheduler.advanceUntilIdle()
 
-        viewModel.deleteDownload("ep1")
+        viewModel.deleteAudioFile("ep1")
         testDispatcher.scheduler.advanceUntilIdle()
 
         viewModel.uiState.test {
             val state = awaitItem()
-            assertFalse(state.episodes[0].isDownloaded)
-            assertFalse(downloadRepository.isDownloaded("ep1"))
+            state.episodes[0].isDownloaded shouldBe false
+            episodeAudioRepository.isDownloaded("ep1") shouldBe false
             cancelAndIgnoreRemainingEvents()
         }
     }

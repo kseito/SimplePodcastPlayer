@@ -2,7 +2,7 @@ package jp.kztproject.simplepodcastplayer.screen
 
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IEpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
 import kotlinx.coroutines.CoroutineScope
@@ -10,7 +10,7 @@ import kotlinx.coroutines.Dispatchers
 
 class PlayerViewModelImpl(
     override val playbackRepository: IPlaybackRepository,
-    override val downloadRepository: IDownloadRepository,
+    override val episodeAudioRepository: IEpisodeAudioRepository,
 ) : BasePlayerViewModel() {
     override val audioPlayer = AudioPlayer()
     override val coroutineScope = CoroutineScope(Dispatchers.Main)

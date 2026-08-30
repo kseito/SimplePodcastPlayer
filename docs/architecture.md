@@ -23,8 +23,9 @@ composeApp/src/
 │   │       ├── PodcastRepository.kt
 │   │       ├── IPodcastRepository.kt
 │   │       ├── PlaybackRepository.kt
-│   │       ├── DownloadRepository.kt（expect）
-│   │       └── IDownloadRepository.kt
+│   │       ├── EpisodeAudioRepository.kt
+│   │       ├── IEpisodeAudioRepository.kt
+│   │       └── EpisodeAudioRepositoryBuilder.kt（expect）
 │   ├── di/
 │   │   └── AppModule.kt           # Koin モジュール定義
 │   ├── navigation/
@@ -32,7 +33,7 @@ composeApp/src/
 │   ├── player/
 │   │   └── AudioPlayer.kt         # expect 宣言
 │   ├── download/
-│   │   ├── AudioDownloader.kt     # expect 宣言
+│   │   ├── IAudioDownloader.kt    # プラットフォーム実装のインターフェース
 │   │   └── DownloadState.kt
 │   ├── screen/
 │   │   ├── PodcastListScreen.kt
@@ -56,7 +57,7 @@ composeApp/src/
 │   ├── activity/PlayerActivity.kt
 │   ├── service/PlaybackService.kt
 │   ├── data/database/DatabaseBuilder.android.kt
-│   ├── data/repository/DownloadRepository.android.kt
+│   ├── data/repository/EpisodeAudioRepositoryBuilder.kt
 │   ├── player/AudioPlayer.android.kt
 │   ├── download/AudioDownloader.android.kt
 │   ├── screen/
@@ -67,7 +68,7 @@ composeApp/src/
     ├── MainViewController.kt
     ├── IOSPlatform.kt
     ├── data/database/DatabaseBuilder.ios.kt
-    ├── data/repository/DownloadRepository.ios.kt
+    ├── data/repository/EpisodeAudioRepositoryBuilder.kt
     ├── player/AudioPlayer.ios.kt
     ├── download/AudioDownloader.ios.kt
     ├── screen/
@@ -121,7 +122,7 @@ val appModule = module {
 
     // Repository（singleton）
     single<IPodcastRepository> { PodcastRepository(get(), get()) }
-    factory<IDownloadRepository> { DownloadRepositoryBuilder.build() }
+    single<IEpisodeAudioRepository> { EpisodeAudioRepositoryBuilder.build() }
 
     // Services（factory）
     factory<IAppleSearchApiClient> { AppleSearchApiClient() }
@@ -131,7 +132,7 @@ val appModule = module {
     viewModel { params ->
         PodcastDetailViewModel(
             podcastRepository = get(),
-            downloadRepository = get(),
+            episodeAudioRepository = get(),
             appleApiClient = get(),
             onNavigateToPlayer = params.get<(Episode, Podcast) -> Unit>(),
         )
@@ -143,7 +144,7 @@ val appModule = module {
 
 1. `AppModule.kt` に `single` / `factory` / `viewModel` ブロックを追加
 2. ViewModel はコンストラクタ引数で受け取る（`get()` で解決）
-3. プラットフォーム固有依存はビルダークラス経由で提供（例: `DownloadRepositoryBuilder`）
+3. プラットフォーム固有依存はビルダークラス経由で提供（例: `EpisodeAudioRepositoryBuilder`）
 
 ## データフロー
 
@@ -229,7 +230,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         DatabaseBuilder.init(this)           // Context が必要な初期化
-        DownloadRepositoryBuilder.init(this)
+        EpisodeAudioRepositoryBuilder.init(this)
         setContent { App() }
     }
 }

@@ -15,7 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.media3.exoplayer.ExoPlayer
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IEpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.screen.PlayerScreen
 import jp.kztproject.simplepodcastplayer.screen.PlayerViewModelImpl
@@ -29,7 +29,7 @@ class PlayerActivity :
     ComponentActivity(),
     KoinComponent {
     private val playbackRepository: IPlaybackRepository by inject()
-    private val downloadRepository: IDownloadRepository by inject()
+    private val episodeAudioRepository: IEpisodeAudioRepository by inject()
     private var playbackService: PlaybackService? = null
     private var viewModel by mutableStateOf<PlayerViewModelImpl?>(null)
     private var isBound = false
@@ -79,7 +79,7 @@ class PlayerActivity :
             val episode = Json.decodeFromString<Episode>(episodeJson)
             val podcast = Json.decodeFromString<Podcast>(podcastJson)
 
-            viewModel = PlayerViewModelImpl(exoPlayer, playbackRepository, downloadRepository)
+            viewModel = PlayerViewModelImpl(exoPlayer, playbackRepository, episodeAudioRepository)
             viewModel?.loadEpisode(episode, podcast)
         }
     }

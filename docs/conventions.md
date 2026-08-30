@@ -133,7 +133,7 @@ class FooViewModelTest {
         // Assert: Turbine で Flow をテスト
         viewModel.uiState.test {
             val state = awaitItem()
-            assertEquals(expected, state.someField)
+            state.someField shouldBe expected
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -148,6 +148,22 @@ class FooViewModelTest {
 | `Turbine (.test { })` | StateFlow の排出を検証 |
 | `TestDataFactory` | テスト用データの一貫した生成 |
 | `Fake*` クラス | Repository / DAO / API Client の Fake 実装 |
+
+### アサーション
+
+**Kotest matchers（`io.kotest.matchers.*`）を使う。** `kotlin.test` の `assertEquals` / `assertTrue` などは使わない。
+テストランナーとライフサイクルアノテーション（`@Test` / `@BeforeTest` / `@AfterTest`）は `kotlin.test` のままで、
+アサーションのみ Kotest に寄せる。
+
+| kotlin.test | Kotest |
+|---|---|
+| `assertEquals(expected, actual)` | `actual shouldBe expected` |
+| `assertTrue(x)` / `assertFalse(x)` | `x shouldBe true` / `x shouldBe false` |
+| `assertNull(x)` / `assertNotNull(x)` | `x.shouldBeNull()` / `x.shouldNotBeNull()` |
+| `assertTrue(list.isEmpty())` | `list.shouldBeEmpty()` |
+| `assertTrue(list.contains(x))` | `list shouldContain x` |
+
+既存テストには `kotlin.test` のまま残っているファイルがあるが、触ったファイルから順次 Kotest に置き換える。
 
 ### Fake クラスのパターン
 

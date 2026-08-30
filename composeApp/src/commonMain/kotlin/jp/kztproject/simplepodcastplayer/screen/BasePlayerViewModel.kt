@@ -3,7 +3,7 @@ package jp.kztproject.simplepodcastplayer.screen
 import jp.kztproject.simplepodcastplayer.data.Episode
 import jp.kztproject.simplepodcastplayer.data.Podcast
 import jp.kztproject.simplepodcastplayer.data.database.entity.EpisodeEntity
-import jp.kztproject.simplepodcastplayer.data.repository.IDownloadRepository
+import jp.kztproject.simplepodcastplayer.data.repository.IEpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.data.repository.IPlaybackRepository
 import jp.kztproject.simplepodcastplayer.player.AudioPlayer
 import kotlinx.coroutines.CoroutineScope
@@ -22,7 +22,7 @@ abstract class BasePlayerViewModel : PlayerViewModel {
 
     internal abstract val audioPlayer: AudioPlayer
     internal abstract val playbackRepository: IPlaybackRepository
-    internal abstract val downloadRepository: IDownloadRepository
+    internal abstract val episodeAudioRepository: IEpisodeAudioRepository
     internal abstract val coroutineScope: CoroutineScope
 
     internal var positionUpdateJob: Job? = null
@@ -95,7 +95,7 @@ abstract class BasePlayerViewModel : PlayerViewModel {
 
             // Check if episode is downloaded, use local file if available
             val audioSource =
-                downloadRepository.getLocalFilePath(episode.id) ?: episode.audioUrl
+                episodeAudioRepository.getAudioFilePath(episode.id) ?: episode.audioUrl
 
             audioPlayer.loadUrl(audioSource)
 
