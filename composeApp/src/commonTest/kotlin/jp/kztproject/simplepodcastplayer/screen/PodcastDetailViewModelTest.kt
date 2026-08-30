@@ -286,6 +286,30 @@ class PodcastDetailViewModelTest {
         episodeAudioRepository.isDownloaded("ep1") shouldBe true
     }
 
+    @Test
+    fun toggleSubscription_countFails_keepsSubscriptionAndDownloads() = runTest {
+        val podcast = subscribeWithDownloadedEpisode()
+        episodeDao.setDownloadedEpisodeQueryError(IllegalStateException("DB error"))
+
+        viewModel.initialize(podcast)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.toggleSubscription()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.uiState.test {
+            val state = expectMostRecentItem()
+            // A failed count must not be read as "no downloads" and silently delete them
+            state.unsubscribeConfirmAudioFileCount.shouldBeNull()
+            state.error shouldBe "Failed to unsubscribe"
+            state.isSubscribed shouldBe true
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        repository.isSubscribed(1L) shouldBe true
+        episodeAudioRepository.isDownloaded("ep1") shouldBe true
+    }
+
     private suspend fun subscribeWithDownloadedEpisode(): Podcast {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
         val episodes = listOf(TestDataFactory.createEpisode(id = "ep1", podcastId = "1"))
