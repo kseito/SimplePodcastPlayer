@@ -43,13 +43,21 @@ class PodcastListViewModel(
     /**
      * Counts the audio files that a cleanup would delete and opens the confirmation dialog.
      * A count of 0 still opens the dialog, which then only reports that there is nothing to delete.
+     *
+     * A failure reports an error instead of opening the dialog, so that it is never mistaken
+     * for "there is nothing to delete".
      */
     fun requestCleanupListenedAudioFiles() {
         viewModelScope.launch {
             val count = runCatching { episodeAudioRepository.countListenedAudioFiles() }
                 .onFailure { Napier.e("Failed to count listened audio files", it) }
-                .getOrDefault(0)
-            _uiState.value = _uiState.value.copy(cleanupConfirmAudioFileCount = count)
+                .getOrNull()
+
+            _uiState.value = if (count == null) {
+                _uiState.value.copy(cleanupMessage = "Failed to check downloads")
+            } else {
+                _uiState.value.copy(cleanupConfirmAudioFileCount = count)
+            }
         }
     }
 
