@@ -89,6 +89,8 @@ class FakeEpisodeDao : EpisodeDao {
         list.filter { it.lastPlaybackPosition > 0L && !it.listened }
     }
 
+    override suspend fun getAllEpisodeIds(): List<String> = episodes.map { it.id }
+
     override suspend fun delete(episodeId: String) {
         episodes.removeAll { it.id == episodeId }
         episodesFlow.value = episodes.toList()

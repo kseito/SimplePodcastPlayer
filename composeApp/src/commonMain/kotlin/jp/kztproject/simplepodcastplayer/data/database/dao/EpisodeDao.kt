@@ -56,6 +56,10 @@ interface EpisodeDao {
     @Query("SELECT * FROM episodes WHERE lastPlaybackPosition > 0 AND listened = 0 ORDER BY lastPlaybackPosition DESC")
     fun getInProgressEpisodes(): Flow<List<EpisodeEntity>>
 
+    // TODO: Remove once existing installs have migrated their downloads to the hashed file names.
+    @Query("SELECT id FROM episodes")
+    suspend fun getAllEpisodeIds(): List<String>
+
     @Query("DELETE FROM episodes WHERE id = :episodeId")
     suspend fun delete(episodeId: String)
 }

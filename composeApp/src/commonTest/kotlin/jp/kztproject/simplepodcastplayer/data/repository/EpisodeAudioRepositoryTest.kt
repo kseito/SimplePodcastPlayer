@@ -121,6 +121,37 @@ class EpisodeAudioRepositoryTest {
         episodeDao.getById("ep3")!!.isDownloaded shouldBe true
     }
 
+    @Test
+    fun migrateLegacyAudioFileNames_movesFilesLeftUnderTheOldName() = runTest {
+        addEpisode(id = "ep1", podcastId = "1")
+        addEpisode(id = "ep2", podcastId = "1")
+        addEpisode(id = "ep3", podcastId = "1", isDownloaded = true)
+        audioDownloader.setLegacyFileName("ep1")
+        audioDownloader.setLegacyFileName("ep2")
+
+        repository.migrateLegacyAudioFileNames() shouldBe 2
+
+        // A migrated file is reachable again, which is what makes the episode count as downloaded
+        audioDownloader.isDownloaded("ep1") shouldBe true
+        audioDownloader.isDownloaded("ep2") shouldBe true
+        audioDownloader.isDownloaded("ep3") shouldBe true
+    }
+
+    @Test
+    fun migrateLegacyAudioFileNames_withoutLegacyFiles_doesNothing() = runTest {
+        addEpisode(id = "ep1", podcastId = "1", isDownloaded = true)
+
+        repository.migrateLegacyAudioFileNames() shouldBe 0
+    }
+
+    @Test
+    fun deleteIncompleteDownloads_clearsLeftoversOfInterruptedDownloads() = runTest {
+        audioDownloader.setIncompleteDownloads(2)
+
+        repository.deleteIncompleteDownloads() shouldBe 2
+        repository.deleteIncompleteDownloads() shouldBe 0
+    }
+
     private suspend fun addEpisode(
         id: String,
         podcastId: String,

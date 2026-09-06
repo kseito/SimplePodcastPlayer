@@ -66,6 +66,12 @@ class EpisodeAudioRepository(private val audioDownloader: IAudioDownloader, priv
     override suspend fun deleteListenedAudioFiles(): Int =
         deleteAll(episodeDao.getListenedDownloadedEpisodes().map { it.id })
 
+    override suspend fun migrateLegacyAudioFileNames(): Int = episodeDao.getAllEpisodeIds().count { episodeId ->
+        runCatching { audioDownloader.migrateLegacyFileName(episodeId) }
+            .onFailure { Napier.e("Failed to migrate audio file name: $episodeId", it) }
+            .getOrDefault(false)
+    }
+
     override suspend fun deleteIncompleteDownloads(): Int = audioDownloader.deleteIncompleteDownloads()
 
     /**

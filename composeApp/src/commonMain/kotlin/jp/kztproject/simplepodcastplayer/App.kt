@@ -43,6 +43,10 @@ fun App() {
     ) {
         val episodeAudioRepository = koinInject<IEpisodeAudioRepository>()
         LaunchedEffect(Unit) {
+            // TODO: Drop this call once existing installs have migrated to the hashed file names.
+            runCatching { episodeAudioRepository.migrateLegacyAudioFileNames() }
+                .onFailure { Napier.e("Failed to migrate legacy audio file names", it) }
+
             // An interrupted download leaves a temporary file that nothing can resume, so clear
             // the leftovers once per app start. Doing it any later could race a download that is
             // still writing its temporary file.

@@ -29,8 +29,8 @@ class AudioDownloader(private val context: Context) : IAudioDownloader {
         send(DownloadState.Downloading(0f))
 
         val downloadDir = getDownloadDirectory()
-        val file = File(downloadDir, fileNameOf(episodeId))
-        val partFile = File(downloadDir, "${fileNameOf(episodeId)}$PART_SUFFIX")
+        val file = File(downloadDir, audioFileNameOf(episodeId))
+        val partFile = File(downloadDir, "${audioFileNameOf(episodeId)}$PART_SUFFIX")
 
         try {
             httpClient.prepareGet(url).execute { response ->
@@ -74,7 +74,7 @@ class AudioDownloader(private val context: Context) : IAudioDownloader {
     }.flowOn(Dispatchers.IO)
 
     override fun getAudioFilePath(episodeId: String): String? {
-        val file = File(getDownloadDirectory(), fileNameOf(episodeId))
+        val file = File(getDownloadDirectory(), audioFileNameOf(episodeId))
         return if (file.exists()) file.absolutePath else null
     }
 
@@ -85,14 +85,22 @@ class AudioDownloader(private val context: Context) : IAudioDownloader {
 
     override fun isDownloaded(episodeId: String): Boolean = getAudioFilePath(episodeId) != null
 
+    override suspend fun migrateLegacyFileName(episodeId: String): Boolean = withContext(Dispatchers.IO) {
+        val downloadDir = getDownloadDirectory()
+        val legacyFile = File(downloadDir, legacyAudioFileNameOf(episodeId))
+        val currentFile = File(downloadDir, audioFileNameOf(episodeId))
+        if (!legacyFile.exists() || currentFile.exists()) {
+            return@withContext false
+        }
+        legacyFile.renameTo(currentFile)
+    }
+
     override suspend fun deleteIncompleteDownloads(): Int = withContext(Dispatchers.IO) {
         getDownloadDirectory()
             .listFiles { file -> file.name.endsWith(PART_SUFFIX) }
             .orEmpty()
             .count { it.delete() }
     }
-
-    private fun fileNameOf(episodeId: String): String = "${episodeId.replace("[^a-zA-Z0-9]".toRegex(), "_")}.mp3"
 
     private companion object {
         const val DOWNLOAD_BUFFER_SIZE = 8192

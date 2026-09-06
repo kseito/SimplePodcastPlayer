@@ -60,7 +60,7 @@ class AudioDownloader : IAudioDownloader {
         send(DownloadState.Downloading(0f))
 
         val downloadDir = getDownloadDirectory()
-        val filePath = "$downloadDir/${fileNameOf(episodeId)}"
+        val filePath = "$downloadDir/${audioFileNameOf(episodeId)}"
         val partPath = "$filePath$PART_SUFFIX"
 
         try {
@@ -143,7 +143,7 @@ class AudioDownloader : IAudioDownloader {
     }
 
     override fun getAudioFilePath(episodeId: String): String? {
-        val filePath = "${getDownloadDirectory()}/${fileNameOf(episodeId)}"
+        val filePath = "${getDownloadDirectory()}/${audioFileNameOf(episodeId)}"
 
         return if (NSFileManager.defaultManager.fileExistsAtPath(filePath)) {
             filePath
@@ -160,6 +160,18 @@ class AudioDownloader : IAudioDownloader {
     override fun isDownloaded(episodeId: String): Boolean = getAudioFilePath(episodeId) != null
 
     @OptIn(ExperimentalForeignApi::class)
+    override suspend fun migrateLegacyFileName(episodeId: String): Boolean = withContext(Dispatchers.IO) {
+        val fileManager = NSFileManager.defaultManager
+        val downloadDir = getDownloadDirectory()
+        val legacyPath = "$downloadDir/${legacyAudioFileNameOf(episodeId)}"
+        val currentPath = "$downloadDir/${audioFileNameOf(episodeId)}"
+        if (!fileManager.fileExistsAtPath(legacyPath) || fileManager.fileExistsAtPath(currentPath)) {
+            return@withContext false
+        }
+        fileManager.moveItemAtPath(legacyPath, toPath = currentPath, error = null)
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
     override suspend fun deleteIncompleteDownloads(): Int = withContext(Dispatchers.IO) {
         val fileManager = NSFileManager.defaultManager
         val downloadDir = getDownloadDirectory()
@@ -169,8 +181,6 @@ class AudioDownloader : IAudioDownloader {
             .filter { it.endsWith(PART_SUFFIX) }
             .count { fileManager.removeItemAtPath("$downloadDir/$it", null) }
     }
-
-    private fun fileNameOf(episodeId: String): String = episodeId.replace(Regex("[^a-zA-Z0-9]"), "_") + ".mp3"
 
     private companion object {
         const val DOWNLOAD_BUFFER_SIZE = 8192
