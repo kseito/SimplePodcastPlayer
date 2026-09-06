@@ -58,11 +58,18 @@ abstract class BasePlayerViewModel : PlayerViewModel {
     }
 
     override fun loadEpisode(episode: Episode, podcast: Podcast) {
+        // Reset the playback fields of the previous episode. Leaving the old duration behind
+        // would make the "95% listened" check in saveCurrentPosition() compare against the
+        // wrong total, so an episode could be marked as listened too early or never at all.
         _uiState.value =
             _uiState.value.copy(
                 episode = episode,
                 podcast = podcast,
                 isLoading = true,
+                isPlaying = false,
+                currentPosition = 0L,
+                duration = 0L,
+                bufferedPosition = 0L,
             )
 
         // Cancel any in-flight load so a previous episode's async work
