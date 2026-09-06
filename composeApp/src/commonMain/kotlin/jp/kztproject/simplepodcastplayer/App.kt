@@ -4,12 +4,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import io.github.aakira.napier.Napier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import jp.kztproject.simplepodcastplayer.data.repository.IEpisodeAudioRepository
 import jp.kztproject.simplepodcastplayer.di.appModule
 import jp.kztproject.simplepodcastplayer.navigation.InProgressEpisodesRoute
 import jp.kztproject.simplepodcastplayer.navigation.PlayerRoute
@@ -27,6 +30,7 @@ import jp.kztproject.simplepodcastplayer.screen.rememberPlayerViewModel
 import jp.kztproject.simplepodcastplayer.ui.theme.AppTheme
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinApplication
+import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration
 
 @Composable
@@ -37,6 +41,15 @@ fun App() {
             modules(appModule)
         },
     ) {
+        val episodeAudioRepository = koinInject<IEpisodeAudioRepository>()
+        LaunchedEffect(Unit) {
+            // An interrupted download leaves a temporary file that nothing can resume, so clear
+            // the leftovers once per app start. Doing it any later could race a download that is
+            // still writing its temporary file.
+            runCatching { episodeAudioRepository.deleteIncompleteDownloads() }
+                .onFailure { Napier.e("Failed to delete incomplete downloads", it) }
+        }
+
         AppTheme {
             Surface(
                 modifier = Modifier.fillMaxSize(),

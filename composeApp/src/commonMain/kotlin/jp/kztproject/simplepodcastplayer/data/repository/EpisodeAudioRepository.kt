@@ -66,6 +66,8 @@ class EpisodeAudioRepository(private val audioDownloader: IAudioDownloader, priv
     override suspend fun deleteListenedAudioFiles(): Int =
         deleteAll(episodeDao.getListenedDownloadedEpisodes().map { it.id })
 
+    override suspend fun deleteIncompleteDownloads(): Int = audioDownloader.deleteIncompleteDownloads()
+
     /**
      * Deletes each audio file independently so one failure does not abort the rest.
      * @return the number of audio files actually deleted

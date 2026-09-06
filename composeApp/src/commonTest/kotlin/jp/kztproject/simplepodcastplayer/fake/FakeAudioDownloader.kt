@@ -14,6 +14,7 @@ class FakeAudioDownloader : IAudioDownloader {
     private val audioFiles = mutableMapOf<String, String>()
     private var shouldFailDownload = false
     private var downloadError: String = "Download failed"
+    private var incompleteDownloads = 0
 
     fun setDownloadedEpisode(episodeId: String, localPath: String) {
         audioFiles[episodeId] = localPath
@@ -26,6 +27,11 @@ class FakeAudioDownloader : IAudioDownloader {
 
     fun clearDownloads() {
         audioFiles.clear()
+    }
+
+    /** Stands in for temporary files left behind on disk by interrupted downloads. */
+    fun setIncompleteDownloads(count: Int) {
+        incompleteDownloads = count
     }
 
     override suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = flow {
@@ -48,4 +54,6 @@ class FakeAudioDownloader : IAudioDownloader {
     override suspend fun deleteAudioFile(episodeId: String): Boolean = audioFiles.remove(episodeId) != null
 
     override fun isDownloaded(episodeId: String): Boolean = audioFiles.containsKey(episodeId)
+
+    override suspend fun deleteIncompleteDownloads(): Int = incompleteDownloads.also { incompleteDownloads = 0 }
 }

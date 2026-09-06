@@ -2,6 +2,9 @@ package jp.kztproject.simplepodcastplayer.download
 
 import kotlinx.coroutines.flow.Flow
 
+/** Raised when the downloaded bytes cannot be written to, or published on, local storage. */
+class DownloadDataCreationException(message: String) : IllegalStateException(message)
+
 /**
  * Performs the actual HTTP download and file operations for episode audio.
  * Implemented per platform; [jp.kztproject.simplepodcastplayer.data.repository.EpisodeAudioRepository]
@@ -36,4 +39,12 @@ interface IAudioDownloader {
      * @return true if downloaded
      */
     fun isDownloaded(episodeId: String): Boolean
+
+    /**
+     * Delete the temporary files left behind by downloads that never completed.
+     * A download only publishes its final file name once the whole body has been written,
+     * so anything still carrying the temporary suffix is known to be unusable.
+     * @return the number of files deleted
+     */
+    suspend fun deleteIncompleteDownloads(): Int
 }

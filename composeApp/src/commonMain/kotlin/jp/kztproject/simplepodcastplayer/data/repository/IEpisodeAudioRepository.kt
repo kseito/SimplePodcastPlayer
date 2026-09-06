@@ -54,4 +54,11 @@ interface IEpisodeAudioRepository {
      * @return the number of audio files actually deleted
      */
     suspend fun deleteListenedAudioFiles(): Int
+
+    /**
+     * Delete the leftovers of downloads that never completed. Intended to run once at startup:
+     * an interrupted download cannot be resumed, and its temporary file only wastes storage.
+     * @return the number of files deleted
+     */
+    suspend fun deleteIncompleteDownloads(): Int
 }
