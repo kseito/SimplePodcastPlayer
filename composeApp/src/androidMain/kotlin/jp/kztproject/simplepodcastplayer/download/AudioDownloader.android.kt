@@ -85,6 +85,14 @@ class AudioDownloader(private val context: Context) : IAudioDownloader {
 
     override fun isDownloaded(episodeId: String): Boolean = getAudioFilePath(episodeId) != null
 
+    override suspend fun downloadedFileNames(): Set<String> = withContext(Dispatchers.IO) {
+        getDownloadDirectory()
+            .list()
+            .orEmpty()
+            .filterNot { it.endsWith(PART_SUFFIX) }
+            .toSet()
+    }
+
     override suspend fun migrateLegacyFileName(episodeId: String): Boolean = withContext(Dispatchers.IO) {
         val downloadDir = getDownloadDirectory()
         val legacyFile = File(downloadDir, legacyAudioFileNameOf(episodeId))

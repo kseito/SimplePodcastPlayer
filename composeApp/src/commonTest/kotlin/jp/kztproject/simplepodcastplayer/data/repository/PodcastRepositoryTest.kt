@@ -108,9 +108,9 @@ class PodcastRepositoryTest {
 
     @Test
     fun saveEpisodes_preservesLocalStateOfExistingEpisodes() = runTest {
-        // Setup: episode with playback progress, listened flag, and download info
+        // Setup: episode with playback progress and listened flag
         episodeDao.insert(
-            TestDataFactory.createEpisodeEntity(id = "ep1", podcastId = "1", isDownloaded = true)
+            TestDataFactory.createEpisodeEntity(id = "ep1", podcastId = "1")
                 .copy(lastPlaybackPosition = 120_000L),
         )
         episodeDao.insert(
@@ -129,8 +129,6 @@ class PodcastRepositoryTest {
         val ep1 = assertNotNull(episodeDao.getById("ep1"))
         assertEquals("Updated Episode 1", ep1.title)
         assertEquals(120_000L, ep1.lastPlaybackPosition)
-        assertTrue(ep1.isDownloaded)
-        assertEquals("/fake/path/ep1.mp3", ep1.localFilePath)
 
         val ep2 = assertNotNull(episodeDao.getById("ep2"))
         assertTrue(ep2.listened)

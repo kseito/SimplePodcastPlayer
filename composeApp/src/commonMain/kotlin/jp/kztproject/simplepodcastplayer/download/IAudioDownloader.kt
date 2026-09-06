@@ -61,6 +61,13 @@ interface IAudioDownloader {
     fun isDownloaded(episodeId: String): Boolean
 
     /**
+     * The names of every audio file held locally, read in a single pass over the download
+     * directory. Answers "which of these episodes are downloaded?" without asking per episode.
+     * Files of downloads still in flight are not included.
+     */
+    suspend fun downloadedFileNames(): Set<String>
+
+    /**
      * Rename the audio file of an episode from [legacyAudioFileNameOf] to [audioFileNameOf].
      * Does nothing when there is no legacy file, or when the episode already has a current one.
      * @return true if a file was renamed

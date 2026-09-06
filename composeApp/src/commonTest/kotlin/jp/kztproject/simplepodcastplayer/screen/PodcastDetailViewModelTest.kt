@@ -260,7 +260,6 @@ class PodcastDetailViewModelTest {
 
         repository.isSubscribed(1L) shouldBe false
         episodeAudioRepository.isDownloaded("ep1") shouldBe false
-        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
     }
 
     @Test
@@ -314,12 +313,6 @@ class PodcastDetailViewModelTest {
         val podcast = TestDataFactory.createPodcast(trackId = 1L)
         val episodes = listOf(TestDataFactory.createEpisode(id = "ep1", podcastId = "1"))
         repository.subscribeToPodcast(podcast, episodes)
-        episodeDao.updateDownloadStatus(
-            episodeId = "ep1",
-            isDownloaded = true,
-            localFilePath = "/fake/path/ep1.mp3",
-            downloadedAt = 1703001600000L,
-        )
         audioDownloader.setDownloadedEpisode("ep1", "/fake/path/ep1.mp3")
         return podcast
     }

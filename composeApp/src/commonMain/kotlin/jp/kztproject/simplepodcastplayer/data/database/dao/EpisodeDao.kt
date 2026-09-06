@@ -28,30 +28,13 @@ interface EpisodeDao {
     @Query("UPDATE episodes SET lastPlaybackPosition = :position WHERE id = :episodeId")
     suspend fun updatePlaybackPosition(episodeId: String, position: Long)
 
-    @Query(
-        """
-        UPDATE episodes
-        SET isDownloaded = :isDownloaded,
-            localFilePath = :localFilePath,
-            downloadedAt = :downloadedAt
-        WHERE id = :episodeId
-        """,
-    )
-    suspend fun updateDownloadStatus(
-        episodeId: String,
-        isDownloaded: Boolean,
-        localFilePath: String?,
-        downloadedAt: Long,
-    )
+    // Whether an episode holds an audio file is answered by the file system, not by this table,
+    // so these queries only narrow down which episodes are worth asking about.
+    @Query("SELECT id FROM episodes WHERE podcastId = :podcastId")
+    suspend fun getEpisodeIdsByPodcastId(podcastId: String): List<String>
 
-    @Query("SELECT * FROM episodes WHERE isDownloaded = 1")
-    fun getDownloadedEpisodes(): Flow<List<EpisodeEntity>>
-
-    @Query("SELECT * FROM episodes WHERE podcastId = :podcastId AND isDownloaded = 1")
-    suspend fun getDownloadedEpisodesByPodcastId(podcastId: String): List<EpisodeEntity>
-
-    @Query("SELECT * FROM episodes WHERE listened = 1 AND isDownloaded = 1")
-    suspend fun getListenedDownloadedEpisodes(): List<EpisodeEntity>
+    @Query("SELECT id FROM episodes WHERE listened = 1")
+    suspend fun getListenedEpisodeIds(): List<String>
 
     @Query("SELECT * FROM episodes WHERE lastPlaybackPosition > 0 AND listened = 0 ORDER BY lastPlaybackPosition DESC")
     fun getInProgressEpisodes(): Flow<List<EpisodeEntity>>

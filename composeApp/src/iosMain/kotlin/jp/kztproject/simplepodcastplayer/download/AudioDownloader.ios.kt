@@ -160,6 +160,16 @@ class AudioDownloader : IAudioDownloader {
     override fun isDownloaded(episodeId: String): Boolean = getAudioFilePath(episodeId) != null
 
     @OptIn(ExperimentalForeignApi::class)
+    override suspend fun downloadedFileNames(): Set<String> = withContext(Dispatchers.IO) {
+        NSFileManager.defaultManager
+            .contentsOfDirectoryAtPath(getDownloadDirectory(), null)
+            .orEmpty()
+            .filterIsInstance<String>()
+            .filterNot { it.endsWith(PART_SUFFIX) }
+            .toSet()
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
     override suspend fun migrateLegacyFileName(episodeId: String): Boolean = withContext(Dispatchers.IO) {
         val fileManager = NSFileManager.defaultManager
         val downloadDir = getDownloadDirectory()

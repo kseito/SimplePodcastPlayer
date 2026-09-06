@@ -54,35 +54,14 @@ class FakeEpisodeDao : EpisodeDao {
         }
     }
 
-    override suspend fun updateDownloadStatus(
-        episodeId: String,
-        isDownloaded: Boolean,
-        localFilePath: String?,
-        downloadedAt: Long,
-    ) {
-        val index = episodes.indexOfFirst { it.id == episodeId }
-        if (index != -1) {
-            episodes[index] = episodes[index].copy(
-                isDownloaded = isDownloaded,
-                localFilePath = localFilePath,
-                downloadedAt = downloadedAt,
-            )
-            episodesFlow.value = episodes.toList()
-        }
-    }
-
-    override fun getDownloadedEpisodes(): Flow<List<EpisodeEntity>> = episodesFlow.map { allEpisodes ->
-        allEpisodes.filter { it.isDownloaded }
-    }
-
-    override suspend fun getDownloadedEpisodesByPodcastId(podcastId: String): List<EpisodeEntity> {
+    override suspend fun getEpisodeIdsByPodcastId(podcastId: String): List<String> {
         downloadedEpisodeQueryError?.let { throw it }
-        return episodes.filter { it.podcastId == podcastId && it.isDownloaded }
+        return episodes.filter { it.podcastId == podcastId }.map { it.id }
     }
 
-    override suspend fun getListenedDownloadedEpisodes(): List<EpisodeEntity> {
+    override suspend fun getListenedEpisodeIds(): List<String> {
         downloadedEpisodeQueryError?.let { throw it }
-        return episodes.filter { it.listened && it.isDownloaded }
+        return episodes.filter { it.listened }.map { it.id }
     }
 
     override fun getInProgressEpisodes(): Flow<List<EpisodeEntity>> = episodesFlow.map { list ->

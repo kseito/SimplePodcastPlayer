@@ -1,6 +1,5 @@
 package jp.kztproject.simplepodcastplayer.data.repository
 
-import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import jp.kztproject.simplepodcastplayer.fake.FakeAudioDownloader
 import jp.kztproject.simplepodcastplayer.fake.FakeEpisodeDao
@@ -23,25 +22,23 @@ class EpisodeAudioRepositoryTest {
     }
 
     @Test
-    fun downloadEpisode_completed_marksEpisodeDownloadedInDb() = runTest {
+    fun downloadEpisode_completed_leavesAnAudioFileBehind() = runTest {
         addEpisode(id = "ep1", podcastId = "1")
 
         repository.downloadEpisode("ep1", "https://example.com/ep1.mp3").collect()
 
         audioDownloader.isDownloaded("ep1") shouldBe true
-        episodeDao.getById("ep1")!!.isDownloaded shouldBe true
-        episodeDao.getById("ep1")!!.localFilePath shouldBe "/fake/path/ep1.mp3"
+        repository.countAudioFilesByPodcast("1") shouldBe 1
     }
 
     @Test
-    fun deleteAudioFile_clearsDownloadColumnsInDb() = runTest {
+    fun deleteAudioFile_removesTheAudioFile() = runTest {
         addEpisode(id = "ep1", podcastId = "1", isDownloaded = true)
 
         repository.deleteAudioFile("ep1") shouldBe true
 
         audioDownloader.isDownloaded("ep1") shouldBe false
-        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
-        episodeDao.getById("ep1")!!.localFilePath.shouldBeNull()
+        repository.countAudioFilesByPodcast("1") shouldBe 0
     }
 
     @Test
@@ -52,16 +49,12 @@ class EpisodeAudioRepositoryTest {
     }
 
     @Test
-    fun deleteAudioFile_fileAlreadyMissing_clearsStaleDownloadState() = runTest {
-        // The DB says downloaded but the file is gone, e.g. it was removed outside the app
-        episodeDao.insert(TestDataFactory.createEpisodeEntity(id = "ep1", podcastId = "1", isDownloaded = true))
+    fun countAudioFilesByPodcast_ignoresEpisodesWhoseFileWasRemovedOutsideTheApp() = runTest {
+        addEpisode(id = "ep1", podcastId = "1", isDownloaded = true)
+        audioDownloader.clearDownloads()
 
-        repository.deleteAudioFile("ep1") shouldBe true
-
-        // Without clearing the columns the episode would stay "downloaded" forever
-        // and keep being counted by the cleanup flows
-        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
-        episodeDao.getById("ep1")!!.localFilePath.shouldBeNull()
+        // Nothing in the DB claims the episode is downloaded, so a file that disappears
+        // behind the app's back cannot leave a count that can never be worked off
         repository.countAudioFilesByPodcast("1") shouldBe 0
     }
 
@@ -85,8 +78,8 @@ class EpisodeAudioRepositoryTest {
         audioDownloader.isDownloaded("ep1") shouldBe false
         audioDownloader.isDownloaded("ep2") shouldBe false
         audioDownloader.isDownloaded("ep3") shouldBe true
-        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
-        episodeDao.getById("ep3")!!.isDownloaded shouldBe true
+        repository.countAudioFilesByPodcast("1") shouldBe 0
+        repository.countAudioFilesByPodcast("2") shouldBe 1
     }
 
     @Test
@@ -117,8 +110,7 @@ class EpisodeAudioRepositoryTest {
         audioDownloader.isDownloaded("ep1") shouldBe false
         audioDownloader.isDownloaded("ep2") shouldBe false
         audioDownloader.isDownloaded("ep3") shouldBe true
-        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
-        episodeDao.getById("ep3")!!.isDownloaded shouldBe true
+        repository.countListenedAudioFiles() shouldBe 0
     }
 
     @Test
@@ -159,12 +151,7 @@ class EpisodeAudioRepositoryTest {
         isDownloaded: Boolean = false,
     ) {
         episodeDao.insert(
-            TestDataFactory.createEpisodeEntity(
-                id = id,
-                podcastId = podcastId,
-                listened = listened,
-                isDownloaded = isDownloaded,
-            ),
+            TestDataFactory.createEpisodeEntity(id = id, podcastId = podcastId, listened = listened),
         )
         if (isDownloaded) {
             audioDownloader.setDownloadedEpisode(id, "/fake/path/$id.mp3")

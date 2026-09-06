@@ -2,6 +2,7 @@ package jp.kztproject.simplepodcastplayer.fake
 
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.download.IAudioDownloader
+import jp.kztproject.simplepodcastplayer.download.audioFileNameOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -60,6 +61,8 @@ class FakeAudioDownloader : IAudioDownloader {
     override suspend fun deleteAudioFile(episodeId: String): Boolean = audioFiles.remove(episodeId) != null
 
     override fun isDownloaded(episodeId: String): Boolean = audioFiles.containsKey(episodeId)
+
+    override suspend fun downloadedFileNames(): Set<String> = audioFiles.keys.map { audioFileNameOf(it) }.toSet()
 
     override suspend fun migrateLegacyFileName(episodeId: String): Boolean =
         legacyFileNames.remove(episodeId).also { if (it) audioFiles[episodeId] = "/fake/path/$episodeId.mp3" }
