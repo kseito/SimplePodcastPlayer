@@ -54,4 +54,19 @@ interface IEpisodeAudioRepository {
      * @return the number of audio files actually deleted
      */
     suspend fun deleteListenedAudioFiles(): Int
+
+    /**
+     * Move the audio files that still carry the pre-hash file name over to the current one, so
+     * that downloads made by an earlier version stay reachable instead of being orphaned.
+     * @return the number of files renamed
+     */
+    // TODO: Remove once existing installs have migrated their downloads to the hashed file names.
+    suspend fun migrateLegacyAudioFileNames(): Int
+
+    /**
+     * Delete the leftovers of downloads that never completed. Intended to run once at startup:
+     * an interrupted download cannot be resumed, and its temporary file only wastes storage.
+     * @return the number of files deleted
+     */
+    suspend fun deleteIncompleteDownloads(): Int
 }

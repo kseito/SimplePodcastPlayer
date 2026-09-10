@@ -4,67 +4,60 @@ import io.github.aakira.napier.Napier
 import jp.kztproject.simplepodcastplayer.data.database.dao.EpisodeDao
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.download.IAudioDownloader
-import kotlin.time.Clock
+import jp.kztproject.simplepodcastplayer.download.audioFileNameOf
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.onEach
 
 /**
- * Keeps the audio files on disk and the download columns of the episode table in sync.
+ * Owns the audio files that episodes are downloaded to.
+ *
+ * The presence of a file is the only record that an episode is downloaded: nothing in the
+ * database mirrors it, so the two cannot drift apart. The episode table is consulted only to
+ * learn which episodes exist and which of them have been listened to.
  * Platform differences are confined to [IAudioDownloader], so these rules stay in commonMain.
  */
 class EpisodeAudioRepository(private val audioDownloader: IAudioDownloader, private val episodeDao: EpisodeDao) :
     IEpisodeAudioRepository {
 
     override suspend fun downloadEpisode(episodeId: String, audioUrl: String): Flow<DownloadState> =
-        audioDownloader.downloadAudio(audioUrl, episodeId).onEach { state ->
-            if (state is DownloadState.Completed) {
-                episodeDao.updateDownloadStatus(
-                    episodeId = episodeId,
-                    isDownloaded = true,
-                    localFilePath = audioDownloader.getAudioFilePath(episodeId),
-                    downloadedAt = Clock.System.now().toEpochMilliseconds(),
-                )
-            }
-        }
+        audioDownloader.downloadAudio(audioUrl, episodeId)
 
     /**
      * @return true if the episode held an audio file that is now gone, false if the deletion
      * failed or there was nothing to delete
      */
-    override suspend fun deleteAudioFile(episodeId: String): Boolean {
-        val deleted = audioDownloader.deleteAudioFile(episodeId)
-        if (!deleted && audioDownloader.isDownloaded(episodeId)) {
-            // The file is still on disk, so the deletion genuinely failed. Leave the DB alone.
-            return false
-        }
-
-        // The file is gone: either this call removed it, or it had already disappeared while the
-        // DB still said "downloaded". Clear the columns either way, otherwise a stale row keeps
-        // being counted by the cleanup flows and can never be cleaned up.
-        val hadStaleDownloadState = !deleted && episodeDao.getById(episodeId)?.isDownloaded == true
-        episodeDao.updateDownloadStatus(
-            episodeId = episodeId,
-            isDownloaded = false,
-            localFilePath = null,
-            downloadedAt = 0L,
-        )
-        return deleted || hadStaleDownloadState
-    }
+    override suspend fun deleteAudioFile(episodeId: String): Boolean = audioDownloader.deleteAudioFile(episodeId)
 
     override fun getAudioFilePath(episodeId: String): String? = audioDownloader.getAudioFilePath(episodeId)
 
     override fun isDownloaded(episodeId: String): Boolean = audioDownloader.isDownloaded(episodeId)
 
     override suspend fun countAudioFilesByPodcast(podcastId: String): Int =
-        episodeDao.getDownloadedEpisodesByPodcastId(podcastId).size
+        downloadedAmong(episodeDao.getEpisodeIdsByPodcastId(podcastId)).size
 
     override suspend fun deleteAudioFilesByPodcast(podcastId: String): Int =
-        deleteAll(episodeDao.getDownloadedEpisodesByPodcastId(podcastId).map { it.id })
+        deleteAll(downloadedAmong(episodeDao.getEpisodeIdsByPodcastId(podcastId)))
 
-    override suspend fun countListenedAudioFiles(): Int = episodeDao.getListenedDownloadedEpisodes().size
+    override suspend fun countListenedAudioFiles(): Int = downloadedAmong(episodeDao.getListenedEpisodeIds()).size
 
     override suspend fun deleteListenedAudioFiles(): Int =
-        deleteAll(episodeDao.getListenedDownloadedEpisodes().map { it.id })
+        deleteAll(downloadedAmong(episodeDao.getListenedEpisodeIds()))
+
+    override suspend fun migrateLegacyAudioFileNames(): Int = episodeDao.getAllEpisodeIds().count { episodeId ->
+        runCatching { audioDownloader.migrateLegacyFileName(episodeId) }
+            .onFailure { Napier.e("Failed to migrate audio file name: $episodeId", it) }
+            .getOrDefault(false)
+    }
+
+    override suspend fun deleteIncompleteDownloads(): Int = audioDownloader.deleteIncompleteDownloads()
+
+    /**
+     * Narrows episode IDs down to the ones that actually hold an audio file, reading the
+     * download directory once rather than asking about each episode in turn.
+     */
+    private suspend fun downloadedAmong(episodeIds: List<String>): List<String> {
+        val downloadedFiles = audioDownloader.downloadedFileNames()
+        return episodeIds.filter { audioFileNameOf(it) in downloadedFiles }
+    }
 
     /**
      * Deletes each audio file independently so one failure does not abort the rest.
