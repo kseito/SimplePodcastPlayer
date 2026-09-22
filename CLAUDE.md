@@ -135,6 +135,54 @@ GitHub Actions workflows run automatically on every PR and push to main:
   - `// TODO: Add error handling for network failures`
   - `// TODO: Replace with real authentication logic`
 
+## Issue Creation Rules
+
+These rules apply whenever Claude Code drafts or creates an issue in this repository.
+
+### This repository is public, and issues are irreversible
+
+Anything written in an issue is world-readable the moment it is submitted.
+Deleting an issue does **not** undo this: GitHub's public event stream is mirrored
+by GHArchive and similar services, so a published issue body is effectively
+impossible to retract. Treat every issue as permanent.
+
+### Never write into an issue
+
+- **Secrets**: tokens, API keys, credentials, keystore or certificate contents.
+  Referring to a secret by *name* (e.g. `CLAUDE_CODE_OAUTH_TOKEN`) is fine;
+  its *value* is not.
+- **Work-derived information**: employer code, designs, internal terminology, or
+  non-public circumstances. Issues must stand on their own as a personal project.
+- **Unfixed vulnerabilities**: a public issue is readable by attackers. Report
+  these through GitHub Security Advisory (Security tab → Report a vulnerability)
+  instead, and never open a regular issue for them.
+
+### Mask logs and stack traces
+
+When pasting logs, stack traces, or screenshots, redact local absolute paths
+(`/Users/<name>/...` → `/Users/<user>/...`), hostnames, IP addresses, email
+addresses, and any token-like strings. Check screenshots for notification bars
+and file paths captured in the frame.
+
+### Every issue states why, and what is out of scope
+
+- **Why**: the 背景 section must explain the motivation — what is inconvenient
+  now, or what the change is aiming at. Do not create issues that are only a
+  list of tasks with no stated reason.
+- **What is not included**: the スコープ外 section must state the boundary, so the
+  issue does not expand without limit.
+
+Follow the section structure in `.github/ISSUE_TEMPLATE/task.md`
+(背景 / 現状 / やること / スコープ外 / 補足). Issues #163 and #164 are reference examples.
+
+### Always propose the draft before creating
+
+**Do not create an issue immediately.** Present the full draft body in the
+conversation first and wait for the repository owner's explicit approval. Only
+create the issue after that approval. This applies to every issue, including
+ones the owner asked for directly — the pre-publication checks above cannot be
+undone after submission.
+
 # important-instruction-reminders
 Do what has been asked; nothing more, nothing less.
 NEVER create files unless they're absolutely necessary for achieving your goal.

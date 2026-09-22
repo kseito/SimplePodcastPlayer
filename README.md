@@ -1,6 +1,9 @@
 # SimplePodcastPlayer
 
-A Kotlin Multiplatform project using Compose Multiplatform, targeting Android and iOS platforms.
+A podcast player for Android and iOS that I built for my own daily listening.
+It doubles as my playground for Kotlin Multiplatform and Compose Multiplatform —
+new library versions and framework features get tried here first, on a real app
+rather than a sample project.
 
 ## Project Overview
 
