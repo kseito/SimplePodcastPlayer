@@ -14,8 +14,5 @@ data class EpisodeEntity(
     val publishedAt: String,
     val listened: Boolean = false,
     val lastPlaybackPosition: Long = 0L,
-    val isDownloaded: Boolean = false,
-    val localFilePath: String? = null,
-    val downloadedAt: Long = 0L,
     val trackId: Long? = null,
 )
