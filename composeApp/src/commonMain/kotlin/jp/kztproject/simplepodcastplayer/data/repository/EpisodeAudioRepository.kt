@@ -5,6 +5,7 @@ import jp.kztproject.simplepodcastplayer.data.database.dao.EpisodeDao
 import jp.kztproject.simplepodcastplayer.download.DownloadState
 import jp.kztproject.simplepodcastplayer.download.IAudioDownloader
 import jp.kztproject.simplepodcastplayer.download.audioFileNameOf
+import jp.kztproject.simplepodcastplayer.download.legacyAudioFileNameOf
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -42,10 +43,16 @@ class EpisodeAudioRepository(private val audioDownloader: IAudioDownloader, priv
     override suspend fun deleteListenedAudioFiles(): Int =
         deleteAll(downloadedAmong(episodeDao.getListenedEpisodeIds()))
 
-    override suspend fun migrateLegacyAudioFileNames(): Int = episodeDao.getAllEpisodeIds().count { episodeId ->
-        runCatching { audioDownloader.migrateLegacyFileName(episodeId) }
-            .onFailure { Napier.e("Failed to migrate audio file name: $episodeId", it) }
-            .getOrDefault(false)
+    override suspend fun migrateLegacyAudioFileNames(): Int {
+        val episodeIds = episodeDao.getAllEpisodeIds()
+        val idsByLegacyName = episodeIds.groupBy(::legacyAudioFileNameOf)
+
+        return idsByLegacyName.values.filter { it.size == 1 }.count { ids ->
+            val episodeId = ids.single()
+            runCatching { audioDownloader.migrateLegacyFileName(episodeId) }
+                .onFailure { Napier.e("Failed to migrate audio file name: $episodeId", it) }
+                .getOrDefault(false)
+        }
     }
 
     override suspend fun deleteIncompleteDownloads(): Int = audioDownloader.deleteIncompleteDownloads()

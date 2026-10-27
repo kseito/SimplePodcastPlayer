@@ -137,6 +137,17 @@ class EpisodeAudioRepositoryTest {
     }
 
     @Test
+    fun migrateLegacyAudioFileNames_skipsNamesSharedByDifferentEpisodes() = runTest {
+        addEpisode(id = "ep-1", podcastId = "1")
+        addEpisode(id = "ep/1", podcastId = "1")
+        audioDownloader.setLegacyFileName("ep-1")
+
+        repository.migrateLegacyAudioFileNames() shouldBe 0
+        audioDownloader.isDownloaded("ep-1") shouldBe false
+        audioDownloader.isDownloaded("ep/1") shouldBe false
+    }
+
+    @Test
     fun deleteIncompleteDownloads_clearsLeftoversOfInterruptedDownloads() = runTest {
         audioDownloader.setIncompleteDownloads(2)
 
