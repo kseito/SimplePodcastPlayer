@@ -58,9 +58,6 @@ class PlaybackService : MediaSessionService() {
                 .setSessionActivity(sessionActivityPendingIntent)
                 .build()
                 .also {
-                    // Local Binder clients bypass onGetSession, so register explicitly.
-                    // Media3 owns notifications and foreground state, including temporary
-                    // audio-focus suppression where isPlaying is false but playWhenReady is true.
                     addSession(it)
                 }
     }
