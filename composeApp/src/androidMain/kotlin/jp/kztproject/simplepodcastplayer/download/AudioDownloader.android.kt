@@ -6,6 +6,7 @@ import io.ktor.client.request.prepareGet
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.http.contentLength
 import io.ktor.utils.io.readAvailable
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
@@ -27,16 +28,16 @@ class AudioDownloader(private val context: Context) : IAudioDownloader {
     override suspend fun downloadAudio(url: String, episodeId: String): Flow<DownloadState> = channelFlow {
         send(DownloadState.Downloading(0f))
 
-        try {
-            val downloadDir = getDownloadDirectory()
-            val fileName = "${episodeId.replace("[^a-zA-Z0-9]".toRegex(), "_")}.mp3"
-            val file = File(downloadDir, fileName)
+        val downloadDir = getDownloadDirectory()
+        val file = File(downloadDir, audioFileNameOf(episodeId))
+        val partFile = File(downloadDir, "${audioFileNameOf(episodeId)}$PART_SUFFIX")
 
+        try {
             httpClient.prepareGet(url).execute { response ->
                 val channel = response.bodyAsChannel()
                 val contentLength = response.contentLength() ?: 0L
 
-                file.outputStream().use { output ->
+                partFile.outputStream().use { output ->
                     val buffer = ByteArray(DOWNLOAD_BUFFER_SIZE)
                     var totalBytesRead = 0L
 
@@ -55,16 +56,25 @@ class AudioDownloader(private val context: Context) : IAudioDownloader {
                 }
             }
 
+            // The presence of the final file is what marks an episode as downloaded, so it may
+            // only appear once the whole body is on disk. Until then the bytes live under the
+            // temporary name, where an interrupted download leaves nothing that looks complete.
+            if (!partFile.renameTo(file)) {
+                throw DownloadDataCreationException("Failed to publish downloaded file: ${file.name}")
+            }
+
             send(DownloadState.Completed)
+        } catch (e: CancellationException) {
+            partFile.delete()
+            throw e
         } catch (e: Exception) {
+            partFile.delete()
             send(DownloadState.Failed(e.message ?: "Download failed"))
         }
     }.flowOn(Dispatchers.IO)
 
     override fun getAudioFilePath(episodeId: String): String? {
-        val downloadDir = getDownloadDirectory()
-        val fileName = "${episodeId.replace("[^a-zA-Z0-9]".toRegex(), "_")}.mp3"
-        val file = File(downloadDir, fileName)
+        val file = File(getDownloadDirectory(), audioFileNameOf(episodeId))
         return if (file.exists()) file.absolutePath else null
     }
 
@@ -75,7 +85,33 @@ class AudioDownloader(private val context: Context) : IAudioDownloader {
 
     override fun isDownloaded(episodeId: String): Boolean = getAudioFilePath(episodeId) != null
 
+    override suspend fun downloadedFileNames(): Set<String> = withContext(Dispatchers.IO) {
+        getDownloadDirectory()
+            .list()
+            .orEmpty()
+            .filterNot { it.endsWith(PART_SUFFIX) }
+            .toSet()
+    }
+
+    override suspend fun migrateLegacyFileName(episodeId: String): Boolean = withContext(Dispatchers.IO) {
+        val downloadDir = getDownloadDirectory()
+        val legacyFile = File(downloadDir, legacyAudioFileNameOf(episodeId))
+        val currentFile = File(downloadDir, audioFileNameOf(episodeId))
+        if (!legacyFile.exists() || currentFile.exists()) {
+            return@withContext false
+        }
+        legacyFile.renameTo(currentFile)
+    }
+
+    override suspend fun deleteIncompleteDownloads(): Int = withContext(Dispatchers.IO) {
+        getDownloadDirectory()
+            .listFiles { file -> file.name.endsWith(PART_SUFFIX) }
+            .orEmpty()
+            .count { it.delete() }
+    }
+
     private companion object {
         const val DOWNLOAD_BUFFER_SIZE = 8192
+        const val PART_SUFFIX = ".part"
     }
 }

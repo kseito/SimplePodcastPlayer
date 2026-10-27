@@ -80,7 +80,7 @@ class PodcastRepository(private val podcastDao: PodcastDao, private val episodeD
     /**
      * Insert or update an episode from feed/API data.
      * EpisodeDao.insert uses OnConflictStrategy.REPLACE, which would wipe local-only state
-     * (playback position, listened flag, download info), so merge it from the existing row.
+     * (playback position, listened flag), so merge it from the existing row.
      */
     private suspend fun upsertEpisode(episode: Episode) {
         val existing = episodeDao.getById(episode.id)
@@ -95,9 +95,6 @@ class PodcastRepository(private val podcastDao: PodcastDao, private val episodeD
                 publishedAt = episode.publishedAt,
                 listened = existing?.listened ?: episode.listened,
                 lastPlaybackPosition = existing?.lastPlaybackPosition ?: 0L,
-                isDownloaded = existing?.isDownloaded ?: false,
-                localFilePath = existing?.localFilePath,
-                downloadedAt = existing?.downloadedAt ?: 0L,
                 trackId = episode.trackId,
             )
         episodeDao.insert(episodeEntity)

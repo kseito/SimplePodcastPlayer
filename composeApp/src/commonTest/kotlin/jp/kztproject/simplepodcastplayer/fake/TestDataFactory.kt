@@ -63,7 +63,6 @@ object TestDataFactory {
         title: String = "Test Episode",
         duration: Long = 1800L,
         listened: Boolean = false,
-        isDownloaded: Boolean = false,
     ) = EpisodeEntity(
         id = id,
         podcastId = podcastId,
@@ -74,9 +73,6 @@ object TestDataFactory {
         publishedAt = "2024-12-15T10:00:00Z",
         listened = listened,
         lastPlaybackPosition = 0L,
-        isDownloaded = isDownloaded,
-        localFilePath = if (isDownloaded) "/fake/path/$id.mp3" else null,
-        downloadedAt = if (isDownloaded) 1703001600000L else 0L, // 2024-12-15 00:00:00 UTC
     )
 
     fun createParsedEpisode(id: String = "ep1", title: String = "Test Episode", duration: Long = 1800L) = ParsedEpisode(

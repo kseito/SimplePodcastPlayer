@@ -187,8 +187,6 @@ class PodcastListViewModelTest {
         // The listened episode's file is gone, the unlistened one is kept
         episodeAudioRepository.isDownloaded("ep1") shouldBe false
         episodeAudioRepository.isDownloaded("ep2") shouldBe true
-        episodeDao.getById("ep1")!!.isDownloaded shouldBe false
-        episodeDao.getById("ep2")!!.isDownloaded shouldBe true
 
         viewModel.uiState.test {
             val state = expectMostRecentItem()
@@ -219,7 +217,7 @@ class PodcastListViewModelTest {
 
     private suspend fun setupEpisode(id: String, listened: Boolean, isDownloaded: Boolean) {
         episodeDao.insert(
-            TestDataFactory.createEpisodeEntity(id = id, listened = listened, isDownloaded = isDownloaded),
+            TestDataFactory.createEpisodeEntity(id = id, listened = listened),
         )
         if (isDownloaded) {
             audioDownloader.setDownloadedEpisode(id, "/fake/path/$id.mp3")
