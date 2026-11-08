@@ -58,17 +58,15 @@ jobs:
       - id: collect-compare-images
         name: Collect compare images
         run: |
-          files=$(find . -type f -name '*_compare.png' | sort)
-          delimiter="$(openssl rand -hex 8)"
-          {
-            echo "screenshot_compare_images<<${delimiter}"
-            echo "$files"
-            echo "${delimiter}"
-          } >> "$GITHUB_OUTPUT"
+          list="$RUNNER_TEMP/screenshot-files"
+          find screenshot-diff-reports -type f -name '*_compare.png' -print0 > "$list"
+          if [[ -s "$list" ]]; then
+            echo 'has_images=true' >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Prepare companion branch and outputs
         id: prepare-companion-branch
-        if: steps.collect-compare-images.outputs.screenshot_compare_images != ''
+        if: steps.collect-compare-images.outputs.has_images == 'true'
         env:
           BRANCH_NAME: companion_${{ github.event.workflow_run.head_branch }}
         run: |
@@ -82,10 +80,17 @@ jobs:
           git branch -D "$BRANCH_NAME" || true
           git checkout --orphan "$BRANCH_NAME"
           git rm -rf .
-          echo "${{ steps.collect-compare-images.outputs.screenshot_compare_images }}" | while read file; do
-            [ -n "$file" ] && git add "$file"
-            echo "![](https://github.com/${{ github.repository }}/blob/${BRANCH_NAME}/$(echo "${file}" | sed 's|^\./||')?raw=true)" >> "$GITHUB_OUTPUT"
-          done
+          export LC_ALL=C
+          while IFS= read -r -d '' file; do
+            # Keep artifact paths out of shell source and allow only URL-safe path components.
+            if [[ ! "$file" =~ ^screenshot-diff-reports/([A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*_compare\.png$ ]]; then
+              echo 'Invalid screenshot path' >&2
+              exit 1
+            fi
+            git add -- "$file"
+            printf '![](https://github.com/%s/blob/%s/%s?raw=true)\n' \
+              "$GITHUB_REPOSITORY" "$BRANCH_NAME" "$file" >> "$GITHUB_OUTPUT"
+          done < "$RUNNER_TEMP/screenshot-files"
           echo "${delimiter}" >> "$GITHUB_OUTPUT"
           git config --global user.name github-actions[bot]
           git config --global user.email github-actions[bot]@users.noreply.github.com
@@ -112,7 +117,7 @@ jobs:
       - name: Delete comment when no diff
         # 差分が無くなったら既存の比較結果コメントを削除する（解消が一目で分かるようにする）
         if: >
-          steps.collect-compare-images.outputs.screenshot_compare_images == '' &&
+          steps.collect-compare-images.outputs.has_images != 'true' &&
           steps.fc.outputs.comment-id != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
