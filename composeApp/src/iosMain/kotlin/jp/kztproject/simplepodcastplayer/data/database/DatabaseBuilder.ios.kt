@@ -2,7 +2,7 @@ package jp.kztproject.simplepodcastplayer.data.database
 
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.SQLiteDriver
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.IO
@@ -33,8 +33,8 @@ actual object DatabaseBuilder {
     }
 }
 
-actual fun RoomDatabase.Builder<AppDatabase>.buildDatabase(): AppDatabase = this
-    .setDriver(BundledSQLiteDriver())
+actual fun RoomDatabase.Builder<AppDatabase>.buildDatabase(driver: SQLiteDriver): AppDatabase = this
+    .setDriver(driver)
     .setQueryCoroutineContext(Dispatchers.IO)
-    .fallbackToDestructiveMigration(dropAllTables = true)
+    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
     .build()
