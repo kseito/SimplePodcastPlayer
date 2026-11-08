@@ -43,7 +43,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RUN_ID: ${{ github.event.workflow_run.id }}
-        run: python3 .github/scripts/screenshot_report.py resolve
+        run: python3 .github/scripts/screenshot_report.py
 
       - name: Download comparison results
         if: steps.pr.outputs.number != ''
@@ -53,34 +53,48 @@ jobs:
           name: screenshot-diff-reports
           path: ${{ runner.temp }}/screenshot-input
 
-      - name: Validate and prepare comparison images
+      - name: Publish comparison images
         id: report
         if: steps.pr.outputs.number != ''
         env:
           PR_NUMBER: ${{ steps.pr.outputs.number }}
           RUN_ID: ${{ github.event.workflow_run.id }}
-        run: |
-          python3 .github/scripts/screenshot_report.py prepare \
-            "$RUNNER_TEMP/screenshot-input" "$RUNNER_TEMP/screenshot-safe" \
-            "$RUNNER_TEMP/screenshot-comment.md"
-
-      - name: Publish comparison images
-        if: steps.report.outputs.has_images == 'true'
-        env:
-          BRANCH_NAME: ${{ steps.report.outputs.branch }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Only generated names and validated PNG bytes enter this separate worktree.
-          worktree="$RUNNER_TEMP/screenshot-publish"
-          git worktree add --detach "$worktree" HEAD
-          git -C "$worktree" checkout --orphan "$BRANCH_NAME"
-          git -C "$worktree" rm -rf .
-          cp "$RUNNER_TEMP/screenshot-safe/"*.png "$worktree/"
-          git -C "$worktree" add -- '*.png'
-          git -C "$worktree" -c user.name='github-actions[bot]' \
+          export LC_ALL=C
+          source="$RUNNER_TEMP/screenshot-input"
+          list="$RUNNER_TEMP/screenshot-files"
+          body="$RUNNER_TEMP/screenshot-comment.md"
+          [[ -d "$source" && ! -L "$source" ]]
+          find "$source" -type f -name '*_compare.png' -print0 > "$list"
+          if [[ ! -s "$list" ]]; then
+            echo 'has_images=false' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          branch="companion_pr_${PR_NUMBER}_run_${RUN_ID}"
+          git checkout --orphan "$branch"
+          git rm -rf --ignore-unmatch .
+          printf '## Screenshot Comparison Results\n\n' > "$body"
+          while IFS= read -r -d '' file; do
+            relative="${file#"$source"/}"
+            # Allow only URL-safe components, with no hidden or traversal components.
+            if [[ ! "$relative" =~ ^([A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*_compare\.png$ ]]; then
+              echo 'Invalid screenshot path' >&2
+              exit 1
+            fi
+            target="screenshots/$relative"
+            mkdir -p -- "${target%/*}"
+            cp -- "$file" "$target"
+            git add -- "$target"
+            printf '![](https://github.com/%s/blob/%s/%s?raw=true)\n' \
+              "$GITHUB_REPOSITORY" "$branch" "$target" >> "$body"
+          done < "$list"
+          git -c user.name='github-actions[bot]' \
             -c user.email='github-actions[bot]@users.noreply.github.com' commit -m 'Add screenshot diff'
-          git -C "$worktree" -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
-            push "https://github.com/$GITHUB_REPOSITORY.git" "HEAD:refs/heads/$BRANCH_NAME" --force
+          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
+            push "https://github.com/$GITHUB_REPOSITORY.git" "HEAD:refs/heads/$branch" --force
+          echo 'has_images=true' >> "$GITHUB_OUTPUT"
 
       - name: Find Comment
         if: steps.pr.outputs.number != ''
