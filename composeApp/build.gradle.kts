@@ -106,8 +106,6 @@ kotlin {
             // Roborazzi + Robolectric によるスクリーンショット VRT（Android ホストテスト）
             // ComposablePreviewScanner が CMP の @Preview を直接走査し、
             // Roborazzi がプレビュー用 Robolectric テストを自動生成する。
-            implementation(libs.room.runtime)
-            implementation(libs.sqlite.framework)
             implementation(libs.junit)
             implementation(libs.robolectric)
             implementation(libs.androidx.test.core)
@@ -163,7 +161,6 @@ roborazzi {
 }
 
 tasks.withType<Test>().configureEach {
-    systemProperty("database.schemaDir", file("schemas").absolutePath)
     // Roborazzi のスクリーンショットをネイティブグラフィックスで描画する
     systemProperty("robolectric.graphicsMode", "NATIVE")
     systemProperty("robolectric.pixelCopyRenderMode", "hardware")

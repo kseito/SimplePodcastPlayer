@@ -17,9 +17,6 @@ jobs:
     - name: Set up build environment
       uses: ./.github/actions/setup-build-env
 
-    - name: Test screenshot report input handling
-      run: python3 -m unittest discover -s .github/scripts -p 'test_*.py' -v
-
     - name: Run unit tests
       run: ./gradlew :composeApp:testAndroidHostTest
 

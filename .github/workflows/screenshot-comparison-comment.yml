@@ -2,11 +2,10 @@ name: Screenshot Comparison Comment
 
 # screenshot-comparison.yml の完了後に実行され、差分画像を companion ブランチへ push して
 # PR にスクリーンショット比較結果をコメントする。差分が解消したらコメントを削除する。
-# workflow_run は書き込み権限を持つため、PR の成果物を未信頼データとして検証する。
+# PR からのフォーク経由でも安全に書き込み権限を扱えるよう workflow_run トリガーを使う。
 
 on:
-  # Required to comment on fork PRs. Only trusted main code runs; artifacts are isolated and validated.
-  workflow_run: # zizmor: ignore[dangerous-triggers]
+  workflow_run:
     workflows:
       - Screenshot Comparison
     types:
@@ -33,111 +32,105 @@ jobs:
 
     steps:
       - name: Checkout main
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        uses: actions/checkout@v7
         with:
           ref: main
-          persist-credentials: false
 
-      - name: Resolve and validate pull request
-        id: pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-        run: python3 .github/scripts/screenshot_report.py
+      - name: Download PR number
+        uses: dawidd6/action-download-artifact@d63b86af1b34672e53c440b1b83979861906bad7 # v24
+        with:
+          name: pr
+          run_id: ${{ github.event.workflow_run.id }}
+
+      - id: get-pull-request-number
+        name: Get pull request number
+        shell: bash
+        run: |
+          echo "pull_request_number=$(cat NR)" >> "$GITHUB_OUTPUT"
 
       - name: Download comparison results
-        if: steps.pr.outputs.number != ''
         uses: dawidd6/action-download-artifact@d63b86af1b34672e53c440b1b83979861906bad7 # v24
         with:
           run_id: ${{ github.event.workflow_run.id }}
           name: screenshot-diff-reports
-          path: ${{ runner.temp }}/screenshot-input
+          path: screenshot-diff-reports
 
-      - name: Publish comparison images
-        id: report
-        if: steps.pr.outputs.number != ''
-        env:
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: collect-compare-images
+        name: Collect compare images
         run: |
-          export LC_ALL=C
-          source="$RUNNER_TEMP/screenshot-input"
           list="$RUNNER_TEMP/screenshot-files"
-          body="$RUNNER_TEMP/screenshot-comment.md"
-          [[ -d "$source" && ! -L "$source" ]]
-          find "$source" -type f -name '*_compare.png' -print0 > "$list"
-          if [[ ! -s "$list" ]]; then
-            echo 'has_images=false' >> "$GITHUB_OUTPUT"
-            exit 0
+          find screenshot-diff-reports -type f -name '*_compare.png' -print0 > "$list"
+          if [[ -s "$list" ]]; then
+            echo 'has_images=true' >> "$GITHUB_OUTPUT"
           fi
 
-          branch="companion_pr_${PR_NUMBER}_run_${RUN_ID}"
-          git checkout --orphan "$branch"
-          git rm -rf --ignore-unmatch .
-          printf '## Screenshot Comparison Results\n\n' > "$body"
+      - name: Prepare companion branch and outputs
+        id: prepare-companion-branch
+        if: steps.collect-compare-images.outputs.has_images == 'true'
+        env:
+          BRANCH_NAME: companion_${{ github.event.workflow_run.head_branch }}
+        run: |
+          delimiter="$(openssl rand -hex 8)"
+          {
+            echo "comment_content<<${delimiter}"
+            echo "## Screenshot Comparison Results"
+          } >> "$GITHUB_OUTPUT"
+
+          # orphan ブランチにすることで履歴を持たない比較結果専用ブランチを作る
+          git branch -D "$BRANCH_NAME" || true
+          git checkout --orphan "$BRANCH_NAME"
+          git rm -rf .
+          export LC_ALL=C
           while IFS= read -r -d '' file; do
-            relative="${file#"$source"/}"
-            # Allow only URL-safe components, with no hidden or traversal components.
-            if [[ ! "$relative" =~ ^([A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*_compare\.png$ ]]; then
+            # Keep artifact paths out of shell source and allow only URL-safe path components.
+            if [[ ! "$file" =~ ^screenshot-diff-reports/([A-Za-z0-9_][A-Za-z0-9_.-]*/)*[A-Za-z0-9_][A-Za-z0-9_.-]*_compare\.png$ ]]; then
               echo 'Invalid screenshot path' >&2
               exit 1
             fi
-            target="screenshots/$relative"
-            mkdir -p -- "${target%/*}"
-            cp -- "$file" "$target"
-            git add -- "$target"
+            git add -- "$file"
             printf '![](https://github.com/%s/blob/%s/%s?raw=true)\n' \
-              "$GITHUB_REPOSITORY" "$branch" "$target" >> "$body"
-          done < "$list"
-          git -c user.name='github-actions[bot]' \
-            -c user.email='github-actions[bot]@users.noreply.github.com' commit -m 'Add screenshot diff'
-          git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
-            push "https://github.com/$GITHUB_REPOSITORY.git" "HEAD:refs/heads/$branch" --force
-          echo 'has_images=true' >> "$GITHUB_OUTPUT"
+              "$GITHUB_REPOSITORY" "$BRANCH_NAME" "$file" >> "$GITHUB_OUTPUT"
+          done < "$RUNNER_TEMP/screenshot-files"
+          echo "${delimiter}" >> "$GITHUB_OUTPUT"
+          git config --global user.name github-actions[bot]
+          git config --global user.email github-actions[bot]@users.noreply.github.com
+          git commit -m "Add screenshot diff"
+          git push origin HEAD:"$BRANCH_NAME" -f
 
       - name: Find Comment
-        if: steps.pr.outputs.number != ''
         uses: peter-evans/find-comment@b30e6a3c0ed37e7c023ccd3f1db5c6c0b0c23aad # v4
         id: fc
         with:
-          issue-number: ${{ steps.pr.outputs.number }}
+          issue-number: ${{ steps.get-pull-request-number.outputs.pull_request_number }}
           comment-author: 'github-actions[bot]'
           body-includes: Screenshot Comparison Results
 
       - name: Add or update comment on PR
         uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5
-        if: steps.report.outputs.has_images == 'true'
+        if: steps.prepare-companion-branch.outputs.comment_content != ''
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
-          issue-number: ${{ steps.pr.outputs.number }}
-          body-path: ${{ runner.temp }}/screenshot-comment.md
+          issue-number: ${{ steps.get-pull-request-number.outputs.pull_request_number }}
+          body: ${{ steps.prepare-companion-branch.outputs.comment_content }}
           edit-mode: replace
 
       - name: Delete comment when no diff
         # 差分が無くなったら既存の比較結果コメントを削除する（解消が一目で分かるようにする）
         if: >
-          steps.report.outputs.has_images == 'false' &&
+          steps.collect-compare-images.outputs.has_images != 'true' &&
           steps.fc.outputs.comment-id != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMMENT_ID: ${{ steps.fc.outputs.comment-id }}
         run: |
-          gh api -X DELETE "repos/$GITHUB_REPOSITORY/issues/comments/$COMMENT_ID"
+          gh api -X DELETE "/repos/${{ github.repository }}/issues/comments/${{ steps.fc.outputs.comment-id }}"
 
       - name: Cleanup outdated companion branches
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 2 週間以上更新の無い companion ブランチを削除する
-          git fetch --depth=1 --no-tags origin \
-            '+refs/heads/companion_pr_*:refs/remotes/origin/companion_pr_*'
-          git branch -r --format="%(refname:lstrip=3)" | while IFS= read -r branch; do
-            [[ "$branch" =~ ^companion_pr_[0-9]+_run_[0-9]+$ ]] || continue
+          git branch -r --format="%(refname:lstrip=3)" | grep companion_ | while read -r branch; do
             last_commit_date_timestamp=$(git log -1 --format=%ct "origin/$branch")
             now_timestamp=$(date +%s)
             if [ $((now_timestamp - last_commit_date_timestamp)) -gt 1209600 ]; then
-               git -c credential.helper= -c 'credential.helper=!gh auth git-credential' \
-                 push "https://github.com/$GITHUB_REPOSITORY.git" --delete "$branch"
+               git push origin --delete "$branch"
             fi
           done
