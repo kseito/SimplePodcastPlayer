@@ -6,6 +6,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import io.github.aakira.napier.Napier
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.entryProvider
@@ -28,7 +29,6 @@ import jp.kztproject.simplepodcastplayer.screen.PodcastListScreen
 import jp.kztproject.simplepodcastplayer.screen.PodcastSearchScreen
 import jp.kztproject.simplepodcastplayer.screen.rememberPlayerViewModel
 import jp.kztproject.simplepodcastplayer.ui.theme.AppTheme
-import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.KoinApplication
 import org.koin.compose.koinInject
 import org.koin.dsl.koinConfiguration

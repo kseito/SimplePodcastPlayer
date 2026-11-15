@@ -71,7 +71,7 @@ kotlin {
             implementation(compose.materialIconsExtended)
             implementation(compose.ui)
             implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
+            implementation(libs.compose.ui.tooling.preview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.viewmodel.compose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
@@ -117,7 +117,6 @@ kotlin {
             implementation(libs.roborazzi.rule)
             implementation(libs.roborazzi.preview.scanner.support)
             implementation(libs.composable.preview.scanner.android)
-            implementation(libs.composable.preview.scanner.jvm)
             // CoilRule 用（commonMain の implementation 依存はテストへ伝播しないため明示）
             implementation(libs.coil.compose)
             implementation(libs.coil.test)

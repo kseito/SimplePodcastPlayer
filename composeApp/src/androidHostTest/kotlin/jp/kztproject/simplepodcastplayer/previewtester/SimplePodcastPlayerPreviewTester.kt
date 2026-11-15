@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.ext.junit.rules.ActivityScenarioRule
 import com.github.takahirom.roborazzi.ComposePreviewTester
+import com.github.takahirom.roborazzi.ComposePreviewTester.TestParameter.JUnit4TestParameter
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziActivity
 import com.github.takahirom.roborazzi.captureRoboImage
@@ -13,12 +14,8 @@ import jp.kztproject.simplepodcastplayer.rule.CoilRule
 import org.junit.rules.RuleChain
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
-import sergio.sastre.composable.preview.scanner.jvm.JvmAnnotationInfo
-import sergio.sastre.composable.preview.scanner.jvm.JvmAnnotationScanner
-
-// Compose Multiplatform の @Preview。androidx の @Preview とは別物なので、
-// この FQN を指定して JVM バイトコードから走査する。
-private const val COMPOSE_PREVIEW_ANNOTATION = "org.jetbrains.compose.ui.tooling.preview.Preview"
+import sergio.sastre.composable.preview.scanner.android.AndroidComposablePreviewScanner
+import sergio.sastre.composable.preview.scanner.android.AndroidPreviewInfo
 
 /**
  * ComposablePreviewScanner で収集した CMP `@Preview` を 1 件ずつ Robolectric 上で描画し、
@@ -27,9 +24,8 @@ private const val COMPOSE_PREVIEW_ANNOTATION = "org.jetbrains.compose.ui.tooling
  */
 @Suppress("UNUSED")
 @OptIn(ExperimentalRoborazziApi::class)
-class SimplePodcastPlayerPreviewTester :
-    ComposePreviewTester<ComposePreviewTester.TestParameter.JUnit4TestParameter<JvmAnnotationInfo>> {
-    override fun test(testParameter: ComposePreviewTester.TestParameter.JUnit4TestParameter<JvmAnnotationInfo>) {
+class SimplePodcastPlayerPreviewTester : ComposePreviewTester<JUnit4TestParameter<AndroidPreviewInfo>> {
+    override fun test(testParameter: JUnit4TestParameter<AndroidPreviewInfo>) {
         val preview = testParameter.preview
         val screenshotNameSuffix = preview.previewIndex?.let { "_$it" }.orEmpty()
         // 別ファイルに同名の @Preview があってもファイル名が衝突しないよう、宣言クラス名を接頭辞に付ける
@@ -45,10 +41,10 @@ class SimplePodcastPlayerPreviewTester :
             )
     }
 
-    override fun testParameters(): List<ComposePreviewTester.TestParameter.JUnit4TestParameter<JvmAnnotationInfo>> {
+    override fun testParameters(): List<JUnit4TestParameter<AndroidPreviewInfo>> {
         val options = options()
         val scanResult =
-            JvmAnnotationScanner(COMPOSE_PREVIEW_ANNOTATION)
+            AndroidComposablePreviewScanner()
                 .scanPackageTrees(*options.scanOptions.packages.toTypedArray())
                 .let {
                     if (options.scanOptions.includePrivatePreviews) it.includePrivatePreviews() else it
@@ -58,7 +54,7 @@ class SimplePodcastPlayerPreviewTester :
         return scanResult
             .getPreviews()
             .map {
-                ComposePreviewTester.TestParameter.JUnit4TestParameter(
+                JUnit4TestParameter(
                     composeTestRuleFactory = lifecycleOptions.composeRuleFactory,
                     preview = it,
                 )
